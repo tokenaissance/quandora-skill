@@ -32,12 +32,15 @@ needed for the requested path are visible:
 Some hosts prefix action names with the server name, such as
 `quandora__strategy_submit_run`; treat those as the same actions.
 
-If the connection or actions are unavailable, use the host-specific OAuth flow, then start a new
-chat before continuing:
+Call Strategy actions only after the host exposes them. If the connection or actions are
+unavailable, use the host-specific OAuth flow, then start a new chat before continuing:
 
 - Codex CLI/TUI: run `codex mcp login quandora`.
-- Codex Desktop: authorize the plugin-provided connector, start a new chat, and fully quit and
-  reopen Codex Desktop if the tools remain unavailable.
+- Codex Desktop: authenticate or reconnect through Quandora Connector settings, not the CLI.
+  Complete browser authorization, start a new chat, and fully quit and reopen Codex Desktop if the
+  tools remain unavailable. If a visible Remote MCP tool returns OAuth 401, report that the host
+  rejected the current authorization and reconnect through Connector settings; do not infer a more
+  specific cause from local shell or configuration state.
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
 - Claude Desktop: add a connector named `quandora` with URL
   `https://mcp.quandora.ai/quant`, click Connect, complete browser authorization, then

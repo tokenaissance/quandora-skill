@@ -9,10 +9,10 @@ Use this skill to run Factor Mining through the authenticated Quandora connectio
 
 The agent drafts a valid Factor Mining `plugin.py`, submits the complete source inline, waits for the backtest result, fetches available artifacts, saves safe local files when the host allows it, and summarizes the outcome.
 
-If the required Quandora tools are visible, continue automatically. If they are not visible, use the host's normal Quandora connection path before stopping:
+Call `factor_mining_status` only after the host exposes that tool. If the required Quandora tools are visible, continue automatically. If they are not visible, use the host's normal Quandora connection path before stopping:
 
 - Codex CLI/TUI: run `codex mcp login quandora`. Wait for the user to complete the browser authorization flow, then check again for `factor_mining_status`.
-- Codex Desktop: the plugin provides the Quandora connector. If the first use opens the authorization flow, wait for the user to authorize Quandora in the browser, then continue in a new chat. If the tools still are not visible, tell the user to fully quit and reopen Codex Desktop.
+- Codex Desktop: authenticate or reconnect through Quandora Connector settings, not the CLI. Complete browser authorization, then start a new chat. If the tools still are not visible, fully quit and reopen Codex Desktop. If a visible Remote MCP tool returns OAuth 401, report that the host rejected the current authorization and reconnect through Connector settings; do not infer a more specific cause from local shell or configuration state.
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
 - Claude Desktop: the plugin alone is not enough. Tell the user to open Settings -> Connectors, add a Connector named `quandora` with URL `https://mcp.quandora.ai/quant`, click Connect, authorize Quandora in the browser, then start a new chat.
 - OpenClaw: run `openclaw mcp login quandora`, complete the printed authorization flow, then start a new chat.
@@ -59,7 +59,7 @@ Never infer C# bar fields, field types, decimal/double casts, runtime buffer exp
 
 ## Workflow
 
-Start with `factor_mining_status`. If authorization is missing or the tools are not exposed, use the host's Quandora connection path: desktop hosts use their Connector settings, while CLI/TUI hosts use their MCP login command. Do not ask the user for direct keys.
+After the host exposes `factor_mining_status`, start with it. If authorization is missing or the tools are not exposed, use the host's Quandora connection path: desktop hosts use their Connector settings, while CLI/TUI hosts use their MCP login command. Do not ask the user for direct keys.
 
 Before routing to factor creation, recognize intentional reuse and history intent. If the user asks
 about existing factors, stable versions, prior successful factors, factor evolution, or past runs,
