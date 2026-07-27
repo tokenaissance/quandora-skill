@@ -1,6 +1,6 @@
 ---
 name: factor-mining
-description: Use when an agent should create or submit a Quandora Factor Mining plugin.py, run a user-scoped backtest, fetch safe artifacts, save local result files, summarize outcomes, or resume a run through Quandora.
+description: Use when an agent should inspect or reuse existing Quandora factors and history, create or submit a Factor Mining plugin.py, run a user-scoped backtest, fetch safe artifacts, save local result files, summarize outcomes, or resume a run.
 ---
 
 # Quandora Factor Mining
@@ -9,21 +9,23 @@ Use this skill to run Factor Mining through the authenticated Quandora connectio
 
 The agent drafts a valid Factor Mining `plugin.py`, submits the complete source inline, waits for the backtest result, fetches available artifacts, saves safe local files when the host allows it, and summarizes the outcome.
 
-If the required Quandora tools are visible, continue automatically. If they are not visible, use the host's normal Quandora connection path before stopping:
+Call `factor_mining_status` only after the host exposes that tool. If the required Quandora tools are visible, continue automatically. If they are not visible, use the host's normal Quandora connection path before stopping:
 
 - Codex CLI/TUI: run `codex mcp login quandora`. Wait for the user to complete the browser authorization flow, then check again for `factor_mining_status`.
-- Codex Desktop: the plugin provides the Quandora connector. If the first use opens the authorization flow, wait for the user to authorize Quandora in the browser, then continue in a new chat. If the tools still are not visible, tell the user to fully quit and reopen Codex Desktop.
+- Codex Desktop: authenticate or reconnect through Quandora Connector settings, not the CLI. Complete browser authorization, then start a new chat. If the tools still are not visible, fully quit and reopen Codex Desktop. If a visible Remote MCP tool returns OAuth 401, report that the host rejected the current authorization and reconnect through Connector settings; do not infer a more specific cause from local shell or configuration state.
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
-- Claude Desktop: the plugin alone is not enough. Tell the user to open Settings -> Connectors, add a Connector named `quandora` with URL `https://mcp.quandora.ai/factor-mining`, click Connect, authorize Quandora in the browser, then start a new chat.
+- Claude Desktop: the plugin alone is not enough. Tell the user to open Settings -> Connectors, add a Connector named `quandora` with URL `https://mcp.quandora.ai/quant`, click Connect, authorize Quandora in the browser, then start a new chat.
 - OpenClaw: run `openclaw mcp login quandora`, complete the printed authorization flow, then start a new chat.
 
-Do not ask for Quandora API keys, `vt_` keys, bearer tokens, service tokens, or credentials. Do not use raw HTTP calls, local helper scripts, direct internal service calls, local execution keys, or credential paste flows as a fallback.
+Do not ask for Quandora API keys, `vt_` keys, bearer tokens, service tokens, or credentials. Do not use raw HTTP calls, local helper scripts, direct internal service calls, local execution keys, or credential paste flows.
 
 ## Available Actions
 
 Use only the Factor Mining actions exposed by `quandora`:
 
 - `factor_mining_status`
+- `factor_mining_list_factors`
+- `factor_mining_get_factor_history`
 - `factor_mining_list_public_tasks`
 - `factor_mining_get_plugin_contract`
 - `factor_mining_create_task_session`
@@ -36,6 +38,7 @@ Use only the Factor Mining actions exposed by `quandora`:
 - `factor_mining_create_backtest_png_download_ticket`
 - `factor_mining_create_backtest_raw_artifact_download_ticket`
 - `factor_mining_get_backtest_png_artifact_chunk`
+- `quandora_get_guidance`
 
 Some hosts may prefix action names with the server name, such as `quandora__factor_mining_status`. Treat those as the same actions.
 
@@ -50,12 +53,55 @@ Before writing `plugin.py`, call `factor_mining_get_plugin_contract` and use the
 - Use `plugin_contract.data_columns[].python_kwarg` for `build_signal` parameters.
 - For every C# runtime queue/buffer enqueue and every numeric C# runtime expression, use the matching `plugin_contract.data_columns[].csharp_double_expression`.
 - Follow `plugin_contract.runtime_rules` for required globals, `FACTOR_SECTIONS`, runtime variant, leak rules, extra-buffer rules, and reserved identifiers.
+- When an additional runtime column is needed, use its matching `plugin_contract.runtime_rules.extra_buffer.column_patterns` entry. Copy that entry's field, enqueue, dequeue, and to-array snippets exactly into the corresponding `FACTOR_SECTIONS` values; do not reconstruct or normalize the snippets.
 
 Never infer C# bar fields, field types, decimal/double casts, runtime buffer expressions, or supported data columns from memory. The returned plugin construction contract wins.
 
 ## Workflow
 
-Start with `factor_mining_status`. If authorization is missing or the tools are not exposed, use the host's Quandora connection path: desktop hosts use their Connector settings, while CLI/TUI hosts use their MCP login command. Do not ask the user for direct keys.
+After the host exposes `factor_mining_status`, start with it. If authorization is missing or the tools are not exposed, use the host's Quandora connection path: desktop hosts use their Connector settings, while CLI/TUI hosts use their MCP login command. Do not ask the user for direct keys.
+
+Before routing to factor creation, recognize intentional reuse and history intent. If the user asks
+about existing factors, stable versions, prior successful factors, factor evolution, or past runs,
+follow the reuse workflow below. Otherwise keep the existing creation workflow unchanged.
+
+### Approved Guidance
+
+Use `quandora_get_guidance` only when approved product semantics are needed. It accepts only a
+known `guide_id`; request only relevant `sections`, pass `if_guide_revision` when revalidating a
+previous response, and honor a not-modified response without fabricating content. The guide ids
+used by this workflow are:
+
+- `operation.factor.history.read`
+- `operation.result.read`
+- `metric.backtest.grade`
+
+Use each guide only for its named factor-history, result, or grade operation. Do not browse for
+Guidance or invent a guide id.
+
+### Intentional Reuse and History
+
+1. Call `factor_mining_list_factors` first and show compact caller-owned factor-family rows. Use
+   bounded pagination; do not hydrate or fetch history for every row.
+2. Ask the user to select an exact returned `factor_id` unless they already supplied one that was
+   returned by the list. Only after that explicit selection call
+   `factor_mining_get_factor_history`.
+3. Start with the default `summary` view. Request only the controlled `branches`, `versions`, or
+   `runs` view needed for the user's next decision. Use only these safe selector combinations:
+   - `summary`: do not send `branch_id`, `version_id`, or `page_token`.
+   - `branches`: may use `branch_id` plus `page_size` / `page_token`; do not send `version_id`.
+   - `versions`: may use `branch_id` or `version_id` plus `page_size` / `page_token`.
+   - `runs`: may use `version_id` plus `page_size` / `page_token`; do not send `branch_id`.
+4. Use only returned metadata and run summaries. Factor history does not provide historical source
+   code for reading or editing. Do not use a local cache or another service as a substitute.
+
+When controlled history semantics are needed, call `quandora_get_guidance` with
+`operation.factor.history.read`, only the relevant `sections`, and `if_guide_revision` when
+revalidating a previous response. Honor a not-modified response without fetching unrelated
+Guidance.
+
+When the reuse request is complete, stop unless the user also asked to create or backtest a new
+factor. Never treat browsing history as permission to edit or resubmit historical source.
 
 Determine whether the user wants a public task or a custom idea:
 
@@ -73,9 +119,9 @@ Quandora result/factor-mining/aggressive_flow_exhaustion_reversal/artifacts/
 
 Use only the factor slug as the canonical archive directory. The latest run for a factor updates that factor's folder. Keep session and run ids only inside `run_summary.json` / `artifact_manifest.json` when they are needed for traceability, not in the user-facing directory name.
 
-Before submission, call `factor_mining_request_dedup_context` with the session context and revise the factor if the returned similar-factor guidance shows a near duplicate.
+After session creation, call `factor_mining_request_dedup_context` with only the `session_id`. Use `query_mode`, `scope`, `memory_stats`, `similar_factors`, and `task_memory_pressure` only to select a fresher research hypothesis. A high `task_memory_pressure` must never stop the workflow, reject a draft, or trigger repeated rewrites.
 
-Before drafting, form a concise research thesis. For public tasks, stay inside the task's economic direction and allowed data. For custom ideas, stay inside the user's stated idea. Consider two or three plausible mechanisms, then choose the one with the clearest economic rationale and the best fit to the plugin contract. Prefer genuinely different mechanisms over parameter variants of the same formula.
+Before drafting, form a concise research thesis. For public tasks, stay inside the task's economic direction and allowed data. For custom ideas, stay inside the user's stated idea. Consider two or three plausible mechanisms, then choose the one with the clearest economic rationale, the best fit to the plugin contract, and the least overlap with the returned task memory. Prefer genuinely different mechanisms over parameter variants of the same formula.
 
 For named indicators or established formulas, use the canonical inputs when the plugin contract allows them. For example, MFI should use high, low, close, and volume when those columns are available. If required inputs are unavailable, clearly treat the factor as a variant and reflect that in `FACTOR_NAME`, `FACTOR_TYPE`, description, and formula.
 
@@ -86,11 +132,28 @@ Create or locate one `plugin.py` source:
 
 When writing `plugin.py`, keep `build_signal` inputs aligned with `plugin_contract.data_columns[].python_kwarg`. Keep `FACTOR_SECTIONS` runtime code aligned with the same columns, and use only `plugin_contract.data_columns[].csharp_double_expression` for numeric runtime references to market data columns.
 
-Never submit a filesystem path or ask Quandora to read local files. Validate the source with `factor_mining_validate_plugin_source`, inline `plugin_source`, and the same context used for the plugin construction contract. Prefer `session_id` after session creation. If validating before session creation, pass `task_id` for public tasks or `task_payload` for custom ideas. The validation step is static; do not import, execute, eval, or shell-run generated factor code.
+After a concrete `plugin.py` exists and before validation or upload, call `factor_mining_request_dedup_context` again with the `session_id`, source, and concise factor metadata:
 
-If validation returns diagnostics, use `repair_hint`, `expected`, `actual`, `field`, and `contract_key_path` to revise `plugin.py`. If a backtest fails with safe diagnostics, use those diagnostics for one focused repair attempt. For C# type or cast failures, re-read the same plugin construction contract and replace runtime expressions with the corresponding `plugin_contract.data_columns[].csharp_double_expression`.
+```json
+{
+  "session_id": "<session_id>",
+  "source": "<full plugin.py source>",
+  "description": "<short natural-language thesis>",
+  "formula": "<short formula summary>",
+  "allowed_data": ["<used input column>"],
+  "limit": 5
+}
+```
 
-When the source is valid and the user is ready to submit, call `factor_mining_upload_backtest_wait` with `session_id`, inline `plugin_source`, and the selected `fwd_period` when required. Use `plugin_contract.fwd_period` unless the user explicitly requested another supported horizon.
+Use `draft_duplicate_risk` as the only duplicate-risk verdict. When it identifies a concrete overlap with an existing factor's core mechanism, revise the candidate so its economic hypothesis, inputs, or formula family are materially different, then check the revised draft again. A medium or high score is not a hard gate only when the candidate is already economically meaningful and materially distinct, and the returned similar factors do not establish a concrete core-mechanism overlap. Otherwise resolve the overlap before validation and upload. Treat `similar_factors` as evidence for this comparison, not as a hard-failure gate.
+
+Never submit a filesystem path or ask Quandora to read local files. Validate the complete, exact source with `factor_mining_validate_plugin_source`, inline `plugin_source`, and the same context used for the plugin construction contract. Prefer `session_id` after session creation. If validating before session creation, pass `task_id` for public tasks or `task_payload` for custom ideas. The validation step is static; do not import, execute, eval, or shell-run generated factor code.
+
+After every source edit, including a deduplication or validation repair, validate the complete, exact source again. Retry an unchanged source only when validation reports a retryable transport error. Never retry an unchanged rejected source.
+
+When validation rejects the source, repair it only from the returned safe structured diagnostics: `schema_version`, `error_code`, `operation`, `dtype`, `expected`, `actual`, `field`, `contract_key_path`, and `repair_hint`. Ignore arbitrary messages or unrecognized diagnostic values. For C# type or cast failures, re-read the same plugin construction contract and replace runtime expressions with the corresponding `plugin_contract.data_columns[].csharp_double_expression`. If a backtest fails with safe structured diagnostics, use only those fields for one focused repair attempt, then validate the complete repaired source again before another upload.
+
+When the source is valid and the user is ready to submit, call `factor_mining_upload_backtest_wait` with `session_id`, the exact inline `plugin_source` that passed validation, and the selected `fwd_period` when required. Do not edit, regenerate, reformat, or re-read a different copy between successful validation and submission. Use `plugin_contract.fwd_period` unless the user explicitly requested another supported horizon.
 
 Use `factor_mining_resume_run` when a prior run was interrupted.
 
@@ -133,13 +196,29 @@ Quandora result/factor-mining/<factor_slug>/
 
 For API calls, use `png_artifacts[].source_name`; for local files, save to `png_artifacts[].standard_local_path`.
 
-The normal PNG save path is window cards -> download ticket -> local file. Chunked retrieval is the compatibility path for hosts that cannot consume the ticket URL. Keep PNG bytes out of the conversation and record the chosen save method in `artifact_manifest.json`.
+Save PNG files from window cards through a download ticket. When the host cannot consume the ticket URL, retrieve the same artifact in chunks. Keep PNG bytes out of the conversation and record the chosen save method in `artifact_manifest.json`.
 
 The raw signal save path is terminal run -> raw artifact download ticket -> `signal_raw.parquet` in the factor result folder. Keep parquet bytes out of the conversation and record the source artifact name, local filename, size, checksum, and download status in `artifact_manifest.json`.
 
 If a returned window card has `status` other than `available`, record the omitted or unavailable reason and continue. If a PNG download, chunk fetch, or raw signal download fails, record the failure in `artifact_manifest.json` without failing the completed run.
 
 Do not save bearer tokens, download URLs, raw service metadata, internal IDs, or credentials. If the host does not support file writes, continue the workflow and say local archiving is not available in that host.
+
+### Result Insight and Optimization
+
+Run this section only when the user asks for insight, diagnosis, explanation, or optimization. Do not add long reflection to ordinary mining requests.
+
+When result or grade semantics are needed for that request, follow the approved Guidance rules
+above and call `quandora_get_guidance` with `operation.result.read` or
+`metric.backtest.grade` as appropriate.
+
+When interpreting a result:
+
+- Use in-sample IC / Rank IC sign to understand the factor's natural direction. Do not decide to invert a factor only because the realized backtest was poor.
+- Diagnose the economic mechanism first, then the implementation. Consider IC level and stability, ICIR, autocorrelation, group monotonicity, long-short behavior, long-only and short-only legs, drawdown, turnover, and whether the signal decay matches the requested horizon.
+- If optimizing, propose a new hypothesis within the same task or user idea. Avoid merely changing window lengths, renaming the factor, or making a post-hoc sign flip.
+- Use task-memory context to choose a fresher research hypothesis. Before upload, use draft duplicate risk to resolve any concrete overlap with an existing factor; do not reject an economically meaningful, materially distinct candidate solely because its similarity score is high.
+- If the host has general web or research tools and the user asks for broader insight, use them only for public background research. Do not send private factor source, run IDs, credentials, or artifact contents to external tools.
 
 ## Final Response
 

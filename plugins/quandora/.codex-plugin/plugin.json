@@ -1,7 +1,7 @@
 {
   "name": "quandora",
-  "version": "1.0.9",
-  "description": "All-in-one Quandora plugin for agent workflows.",
+  "version": "2.0.1",
+  "description": "Quandora Factor Mining and Strategy workflows for AI agents.",
   "author": {
     "name": "Varsity Tech Product",
     "url": "https://github.com/varsity-tech-product"
@@ -13,6 +13,7 @@
     "quandora",
     "factor-mining",
     "backtesting",
+    "strategy",
     "quant"
   ],
   "skills": "./skills/",
@@ -20,7 +21,7 @@
   "interface": {
     "displayName": "Quandora",
     "shortDescription": "Use Quandora services from your agent.",
-    "longDescription": "Quandora packages service skills in one plugin. Factor Mining is the first skill and helps agents list tasks, create sessions, submit factor source, run backtests, retrieve artifacts, and summarize results.",
+    "longDescription": "Quandora packages Factor Mining and Strategy skills in one plugin. Agents can research and backtest factors, select eligible factors, compose cross-sectional strategies, retrieve verified artifacts, and summarize results.",
     "developerName": "Varsity Tech Product",
     "category": "Productivity",
     "capabilities": [
@@ -31,7 +32,8 @@
     "defaultPrompt": [
       "Use Quandora Factor Mining to show public tasks.",
       "Use Quandora Factor Mining with my custom factor idea.",
-      "Use Quandora Factor Mining to resume a run and summarize results."
+      "Use Quandora Factor Mining to resume a run and summarize results.",
+      "Use Quandora Strategy to combine eligible factors into a cross-sectional strategy."
     ],
     "brandColor": "#0F766E"
   }
