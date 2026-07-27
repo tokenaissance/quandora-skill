@@ -41,11 +41,11 @@ Call Strategy actions only after the host exposes them. If the connection or act
 unavailable after the host has handled refresh, or the host reports that authorization is required,
 initiate the host-specific OAuth flow and then check the tools again in a new chat:
 
-- Codex CLI/TUI: run `codex mcp login quandora` directly. Let the user complete the browser
-  sign-in or consent page opened by the command; do not ask the user to type the CLI command.
-- Codex Desktop: authenticate or reconnect through Quandora Connector settings, not the CLI.
-  Complete browser authorization, start a new chat, and fully quit and reopen Codex Desktop if the
-  tools remain unavailable.
+- Codex CLI/TUI and Codex Desktop: run `codex mcp login quandora` directly. In Codex Desktop,
+  invoke the command through the available shell or command tool; do not direct the user to
+  Connector settings or ask the user to type the command. Let the user complete the browser sign-in
+  or consent page opened by the command, then check the tools again in a new chat. If Desktop still
+  does not expose them, fully quit and reopen it.
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
 - Claude Desktop: use Settings -> Connectors to connect or reconnect the Connector named
   `quandora` at `https://mcp.quandora.ai/quant`, complete browser authorization, then start a new

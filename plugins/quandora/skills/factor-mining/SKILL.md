@@ -19,12 +19,11 @@ are visible, continue automatically. If they are unavailable after the host has 
 the host reports that authorization is required, initiate the host's normal Quandora connection
 flow before stopping:
 
-- Codex CLI/TUI: run `codex mcp login quandora` directly. Let the user complete the browser
-  sign-in or consent page opened by the command; do not ask the user to type the CLI command. Then
-  check again for `factor_mining_status` in a new chat.
-- Codex Desktop: authenticate or reconnect through Quandora Connector settings, not the CLI.
-  Complete browser authorization, then start a new chat. If the tools still are not visible, fully
-  quit and reopen Codex Desktop.
+- Codex CLI/TUI and Codex Desktop: run `codex mcp login quandora` directly. In Codex Desktop,
+  invoke the command through the available shell or command tool; do not direct the user to
+  Connector settings or ask the user to type the command. Let the user complete the browser sign-in
+  or consent page opened by the command, then check again for `factor_mining_status` in a new chat.
+  If Desktop still does not expose the tools, fully quit and reopen it.
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
 - Claude Desktop: use Settings -> Connectors to connect or reconnect the Connector named
   `quandora` at `https://mcp.quandora.ai/quant`, complete browser authorization, then start a new
