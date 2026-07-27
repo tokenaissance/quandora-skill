@@ -32,21 +32,31 @@ needed for the requested path are visible:
 Some hosts prefix action names with the server name, such as
 `quandora__strategy_submit_run`; treat those as the same actions.
 
-Call Strategy actions only after the host exposes them. If the connection or actions are
-unavailable, use the host-specific OAuth flow, then start a new chat before continuing:
+Quandora access tokens expire after one hour. The host MCP client should use its stored,
+rotating refresh token automatically, so routine access-token expiry does not require another
+browser authorization and must not interrupt the workflow. Never inspect, print, copy, store, or
+ask for an access token or refresh token.
 
-- Codex CLI/TUI: run `codex mcp login quandora`.
-- Codex Desktop: authenticate or reconnect through Quandora Connector settings, not the CLI.
-  Complete browser authorization, start a new chat, and fully quit and reopen Codex Desktop if the
-  tools remain unavailable. If a visible Remote MCP tool returns OAuth 401, report that the host
-  rejected the current authorization and reconnect through Connector settings; do not infer a more
-  specific cause from local shell or configuration state.
+Call Strategy actions only after the host exposes them. If the connection or actions are
+unavailable after the host has handled refresh, or the host reports that authorization is required,
+initiate the host-specific OAuth flow and then check the tools again in a new chat:
+
+- Codex CLI/TUI and Codex Desktop: run `codex mcp login quandora` directly. In Codex Desktop,
+  invoke the command through the available shell or command tool; do not direct the user to
+  Connector settings or ask the user to type the command. Let the user complete the browser sign-in
+  or consent page opened by the command, then check the tools again in a new chat. If Desktop still
+  does not expose them, fully quit and reopen it.
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
-- Claude Desktop: add a connector named `quandora` with URL
-  `https://mcp.quandora.ai/quant`, click Connect, complete browser authorization, then
-  start a new chat.
-- OpenClaw: run `openclaw mcp login quandora`, complete authorization, then start a new
+- Claude Desktop: use Settings -> Connectors to connect or reconnect the Connector named
+  `quandora` at `https://mcp.quandora.ai/quant`, complete browser authorization, then start a new
   chat.
+- OpenClaw: run `openclaw mcp login quandora` directly, complete the browser flow, then start a
+  new chat.
+
+Do not start a new authorization flow merely because an access token reached its one-hour lifetime
+or because of a single authorization response while the host is refreshing. Reauthorize only when
+the host reports a terminal authorization failure or still requires authorization after its refresh
+handling.
 
 The normal workflow uses only the exposed MCP actions above. Never ask for or accept credentials or
 use an alternative service path. Use host-native HTTP only for the one opaque
@@ -231,7 +241,7 @@ Use this single archive capability list. `strategy_get_artifact` accepts the fif
 names marked `available`. The ticket action accepts all twenty-one names. The six PNG names are
 ticket-only.
 
-| Artifact name | Format | Direct read | Ticket local name |
+| Artifact name | Format | Direct read | Local archive name |
 | --- | --- | --- | --- |
 | `status` | JSON | available | `status.json` |
 | `summary` | JSON | available | `summary.json` |
@@ -248,12 +258,12 @@ ticket-only.
 | `result` | JSON | available | `result.json` |
 | `logs` | text | available | `logs.txt` |
 | `code` | text | available | `code.txt` |
-| `chart1_prediction_decile.png` | PNG | ticket only | `chart1_prediction_decile.png` |
-| `chart2_style_long_short.png` | PNG | ticket only | `chart2_style_long_short.png` |
-| `chart3_style_exposure.png` | PNG | ticket only | `chart3_style_exposure.png` |
-| `chart4_decile_autocorr.png` | PNG | ticket only | `chart4_decile_autocorr.png` |
-| `chart5_prediction_style_corr.png` | PNG | ticket only | `chart5_prediction_style_corr.png` |
-| `chart6_daily_turnover.png` | PNG | ticket only | `chart6_daily_turnover.png` |
+| `chart1_prediction_decile.png` | PNG | ticket only | `prediction_decile.png` |
+| `chart2_style_long_short.png` | PNG | ticket only | `style_long_short.png` |
+| `chart3_style_exposure.png` | PNG | ticket only | `style_exposure.png` |
+| `chart4_decile_autocorr.png` | PNG | ticket only | `decile_autocorr.png` |
+| `chart5_prediction_style_corr.png` | PNG | ticket only | `prediction_style_corr.png` |
+| `chart6_daily_turnover.png` | PNG | ticket only | `daily_turnover.png` |
 
 When `archiveStatus == completed`, perform one complete twenty-one-artifact retrieval pass with the
 same `run_id`; visit every registry name exactly once for its artifact-state retrieval. When
@@ -299,14 +309,16 @@ issuance; a direct-read `ready` or `too_large` needs one call to
    host, print it, or store it in a local file.
 2. For JSON/text, write bytes to `artifacts/<local_name>.partial` beside the final file. Keep every
    PNG in the dedicated `artifacts/image/` subdirectory: first require the ticket metadata to contain
-   the registry's exact server-provided filename as `local_name` and `image/png` as its content
-   type, create the image directory before the first PNG write, then write to
-   `artifacts/image/<exact server-provided PNG name>.partial`.
+   the registry's exact artifact name as `local_name` and `image/png` as its content type. Resolve
+   that artifact through the registry's explicit local archive name, create the image directory
+   before the first PNG write, then write to
+   `artifacts/image/<local archive name>.partial`. Do not derive a local filename from any
+   unrecognized server value.
 3. Verify every `.partial` file's byte count and SHA-256 against `size_bytes` and `sha256_hex` from
    the ticket response. For PNG, also require its first eight bytes to be the PNG signature
    `89 50 4e 47 0d 0a 1a 0a`.
 4. Atomically rename the verified `.partial` file to its registry path; for PNG this is
-   `artifacts/image/<exact server-provided PNG name>`. On any download, signature, size, hash,
+   `artifacts/image/<local archive name>`. On any download, signature, size, hash,
    filename, or content-type failure, delete the `.partial` file and record only a bounded safe
    failure class.
 5. Never reuse a ticket after any attempt. For one transient failure before a verified rename,
@@ -444,13 +456,15 @@ Quandora result/
       artifacts/
         <verified JSON/text files using their exact registry local names>
         image/
-          <verified PNG files using their exact server-provided filenames>
+          <verified PNG files using their registry local archive names>
       artifact_manifest.json
 ```
 
-Save `run_summary.json` from the final main-run snapshot. Verified ticket downloads use the
-`local_name` returned by the ticket response. JSON/text files remain directly under `artifacts/`;
-every PNG final file and `.partial` file remains under `artifacts/image/`.
+Save `run_summary.json` from the final main-run snapshot. Verified JSON/text ticket downloads use
+the `local_name` returned by the ticket response. For PNG, first verify that the returned
+`local_name` exactly matches the requested artifact name, then use the registry's local archive
+name. JSON/text files remain directly under `artifacts/`; every PNG final file and `.partial` file
+remains under `artifacts/image/`.
 
 After a completed archive retrieval pass, create `artifact_manifest.json` with the run id, main-run
 status, `archiveStatus: completed`, and exactly twenty-one entries, one for every registry name.
@@ -458,7 +472,7 @@ Each entry contains only the artifact name, terminal/source state, relative loca
 content type, size, SHA-256, and a bounded safe failure class when needed. State that this archive
 pass completed, but do not claim that the archive is fully saved unless all required source states
 and verified local saves justify that claim. A saved PNG's relative local path must be
-`artifacts/image/<exact server-provided PNG name>`.
+`artifacts/image/<local archive name>`.
 
 After a partial archive pass, create the same twenty-one per-artifact entries with
 `archiveStatus: partial`, preserving every returned state and the local path only for verified ready
