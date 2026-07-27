@@ -9,13 +9,33 @@ Use this skill to run Factor Mining through the authenticated Quandora connectio
 
 The agent drafts a valid Factor Mining `plugin.py`, submits the complete source inline, waits for the backtest result, fetches available artifacts, saves safe local files when the host allows it, and summarizes the outcome.
 
-Call `factor_mining_status` only after the host exposes that tool. If the required Quandora tools are visible, continue automatically. If they are not visible, use the host's normal Quandora connection path before stopping:
+Quandora access tokens expire after one hour. The host MCP client should use its stored, rotating
+refresh token automatically, so routine access-token expiry does not require another browser
+authorization and must not interrupt the workflow. Never inspect, print, copy, store, or ask for an
+access token or refresh token.
 
-- Codex CLI/TUI: run `codex mcp login quandora`. Wait for the user to complete the browser authorization flow, then check again for `factor_mining_status`.
-- Codex Desktop: authenticate or reconnect through Quandora Connector settings, not the CLI. Complete browser authorization, then start a new chat. If the tools still are not visible, fully quit and reopen Codex Desktop. If a visible Remote MCP tool returns OAuth 401, report that the host rejected the current authorization and reconnect through Connector settings; do not infer a more specific cause from local shell or configuration state.
+Call `factor_mining_status` only after the host exposes that tool. If the required Quandora tools
+are visible, continue automatically. If they are unavailable after the host has handled refresh, or
+the host reports that authorization is required, initiate the host's normal Quandora connection
+flow before stopping:
+
+- Codex CLI/TUI: run `codex mcp login quandora` directly. Let the user complete the browser
+  sign-in or consent page opened by the command; do not ask the user to type the CLI command. Then
+  check again for `factor_mining_status` in a new chat.
+- Codex Desktop: authenticate or reconnect through Quandora Connector settings, not the CLI.
+  Complete browser authorization, then start a new chat. If the tools still are not visible, fully
+  quit and reopen Codex Desktop.
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
-- Claude Desktop: the plugin alone is not enough. Tell the user to open Settings -> Connectors, add a Connector named `quandora` with URL `https://mcp.quandora.ai/quant`, click Connect, authorize Quandora in the browser, then start a new chat.
-- OpenClaw: run `openclaw mcp login quandora`, complete the printed authorization flow, then start a new chat.
+- Claude Desktop: use Settings -> Connectors to connect or reconnect the Connector named
+  `quandora` at `https://mcp.quandora.ai/quant`, complete browser authorization, then start a new
+  chat.
+- OpenClaw: run `openclaw mcp login quandora` directly, complete the browser flow, then start a
+  new chat.
+
+Do not start a new authorization flow merely because an access token reached its one-hour lifetime
+or because of a single authorization response while the host is refreshing. Reauthorize only when
+the host reports a terminal authorization failure or still requires authorization after its refresh
+handling.
 
 Do not ask for Quandora API keys, `vt_` keys, bearer tokens, service tokens, or credentials. Do not use raw HTTP calls, local helper scripts, direct internal service calls, local execution keys, or credential paste flows.
 
