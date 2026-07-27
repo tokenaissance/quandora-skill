@@ -1,6 +1,6 @@
 interface:
   display_name: "Factor Mining"
-  short_description: "Write and backtest Quandora factor plugins"
+  short_description: "Research and backtest Quandora factors"
   default_prompt: "Use $factor-mining to list public tasks or run a custom factor idea."
 
 dependencies:
@@ -9,5 +9,5 @@ dependencies:
       value: "quandora"
       description: "Quandora Factor Mining connection"
       transport: "streamable_http"
-      url: "https://mcp.quandora.ai/factor-mining"
-      oauth_resource: "https://mcp.quandora.ai/factor-mining"
+      url: "https://mcp.quandora.ai/quant"
+      oauth_resource: "https://mcp.quandora.ai/quant"

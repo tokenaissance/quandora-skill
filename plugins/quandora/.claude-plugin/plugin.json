@@ -1,7 +1,7 @@
 {
   "name": "quandora",
-  "version": "1.0.9",
-  "description": "All-in-one Quandora plugin for agent workflows.",
+  "version": "2.0.1",
+  "description": "Quandora Factor Mining and Strategy workflows for AI agents.",
   "author": {
     "name": "Varsity Tech Product",
     "url": "https://github.com/varsity-tech-product"
@@ -13,7 +13,7 @@
   "mcpServers": {
     "quandora": {
       "type": "http",
-      "url": "https://mcp.quandora.ai/factor-mining"
+      "url": "https://mcp.quandora.ai/quant"
     }
   }
 }

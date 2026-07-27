@@ -95,7 +95,7 @@ Quandora Plugins is the public marketplace for Quandora agent integrations. The 
 quandora@quandora
 ```
 
-Quandora Factor Mining lets local agents create `plugin.py`, submit it through the authenticated Quandora connection, run a backtest, retrieve available factor cards and chart artifacts, and save the run files in the local workspace.
+The Quandora plugin includes Factor Mining and Strategy skills. Local agents can research and backtest factors, inspect reusable factor history, compose cross-sectional strategies from eligible factors, retrieve verified artifacts, and save result archives in the local workspace.
 
 ### Install
 
@@ -112,7 +112,7 @@ Plugin: quandora@quandora
 You can also ask Codex Desktop to install and connect Quandora for you:
 
 ```
-Install Quandora from varsity-tech-product/quandora-plugins, then connect Quandora Factor Mining.
+Install Quandora from varsity-tech-product/quandora-plugins, then connect Quandora.
 ```
 
 Codex may ask before running the Codex CLI setup commands. These commands install the Quandora plugin into Codex, write Codex plugin/MCP configuration, and open Quandora OAuth. They do not grant Quandora access to your local files.
@@ -145,7 +145,7 @@ Claude Desktop requires both the Quandora plugin and the Quandora connector. Aft
 
 ```
 Name: quandora
-URL: https://mcp.quandora.ai/factor-mining
+URL: https://mcp.quandora.ai/quant
 ```
 
 Use Settings -> Connectors, add the Connector above, click Connect, authorize Quandora in the browser, then start a new chat.
@@ -154,7 +154,7 @@ In Claude Code, open `/mcp` and authenticate `quandora`, then start a new chat.
 
 Claude Desktop can use the connected Quandora tools in chat, but local result-folder archiving is only guaranteed in local agent environments such as Claude Code, Codex, and OpenClaw. Claude Desktop's built-in file creation uses Claude's sandbox and may provide downloadable files rather than writing directly to a chosen local folder.
 
-Factor Mining chart downloads use returned server `source_name` values for API calls and save local PNGs to returned `standard_local_path` values. When available, the raw signal artifact is saved as `signal_raw.parquet` in the factor result folder.
+Factor Mining chart downloads use returned server `source_name` values for API calls and save local PNGs to returned `standard_local_path` values. When available, the raw signal artifact is saved as `signal_raw.parquet` in the factor result folder. Strategy artifacts use short-lived single-use download tickets and are verified before being added to the local archive.
 
 #### OpenClaw
 
@@ -198,8 +198,33 @@ When the host supports local files, each run is saved under a stable folder name
 Quandora result/factor-mining/aggressive_flow_exhaustion_reversal/
 ```
 
-The run folder contains the submitted `plugin.py`, a redacted `run_summary.json`, `factor_card_is.json` and `factor_card_all.json` when available, `artifact_manifest.json`, and PNG charts under `artifacts/is/` and `artifacts/all/`. The agent prints the result, artifact, and chart folder paths at the end of each run.
+The run folder contains the submitted `plugin.py`, a redacted `run_summary.json`, `factor_card_is.json` when available, `artifact_manifest.json`, PNG charts under `artifacts/is/`, and `signal_raw.parquet` when available. The agent prints the result, artifact, and chart folder paths at the end of each run.
+
+### Use Strategy
+
+Use the skill command when available:
+
+```text
+/strategy combine eligible factors into a cross-sectional strategy
+```
+
+You can also ask naturally:
+
+```text
+Use Quandora Strategy to list eligible factors.
+Use Quandora Strategy to compare selected factors before submission.
+Use Quandora Strategy to combine eligible factors and show the effective configuration before submitting.
+Use Quandora Strategy to resume a run and archive its results.
+```
+
+When the host supports local files, strategy runs are saved under:
+
+```text
+Quandora result/strategy/<strategy_slug>/
+```
+
+The run folder contains `run_summary.json`, verified JSON/text artifacts, PNG files under `artifacts/image/`, and `artifact_manifest.json`. The agent reports absolute paths for every saved result.
 
 ### License
 
-This repository is licensed under the Apache License 2.0. See [LICENSE](LICENSE/).
+This repository is licensed under the Apache License 2.0. See [LICENSE](LICENSE).

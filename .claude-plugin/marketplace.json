@@ -5,17 +5,18 @@
     "url": "https://github.com/varsity-tech-product"
   },
   "description": "Quandora plugin marketplace.",
-  "version": "1.0.9",
+  "version": "2.0.1",
   "plugins": [
     {
       "name": "quandora",
-      "description": "All-in-one Quandora plugin for agent workflows.",
-      "version": "1.0.9",
+      "description": "Quandora Factor Mining and Strategy workflows for AI agents.",
+      "version": "2.0.1",
       "source": "./plugins/quandora",
       "category": "Productivity",
       "tags": [
         "quandora",
         "factor-mining",
+        "strategy",
         "quant"
       ],
       "strict": true
