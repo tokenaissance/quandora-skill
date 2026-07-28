@@ -95,7 +95,7 @@ Quandora Plugins is the public marketplace for Quandora agent integrations. The 
 quandora@quandora
 ```
 
-The Quandora plugin includes Factor Mining and Strategy skills. Local agents can research and backtest factors, inspect reusable factor history, compose cross-sectional strategies from eligible factors, retrieve verified artifacts, and save result archives in the local workspace.
+The Quandora plugin includes Factor Mining and Strategy Building skills. Local agents can research and backtest factors, inspect reusable factor history, compose cross-sectional strategies from eligible factors, retrieve verified artifacts, and save result archives in the local workspace.
 
 ### Install
 
@@ -200,21 +200,21 @@ Quandora result/factor-mining/aggressive_flow_exhaustion_reversal/
 
 The run folder contains the submitted `plugin.py`, a redacted `run_summary.json`, `factor_card_is.json` when available, `artifact_manifest.json`, PNG charts under `artifacts/is/`, and `signal_raw.parquet` when available. The agent prints the result, artifact, and chart folder paths at the end of each run.
 
-### Use Strategy
+### Use Strategy Building
 
 Use the skill command when available:
 
 ```text
-/strategy combine eligible factors into a cross-sectional strategy
+/strategy-building combine eligible factors into a cross-sectional strategy
 ```
 
 You can also ask naturally:
 
 ```text
-Use Quandora Strategy to list eligible factors.
-Use Quandora Strategy to compare selected factors before submission.
-Use Quandora Strategy to combine eligible factors and show the effective configuration before submitting.
-Use Quandora Strategy to resume a run and archive its results.
+Use Quandora Strategy Building to list eligible factors.
+Use Quandora Strategy Building to compare selected factors before submission.
+Use Quandora Strategy Building to combine eligible factors and show the effective configuration before submitting.
+Use Quandora Strategy Building to resume a run and archive its results.
 ```
 
 When the host supports local files, strategy runs are saved under:
