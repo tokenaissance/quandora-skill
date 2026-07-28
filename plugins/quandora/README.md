@@ -1,6 +1,6 @@
 # Quandora
 
-Quandora provides Factor Mining and Strategy skills through one authenticated Remote MCP connection.
+Quandora provides Factor Mining and Strategy Building skills through one authenticated Remote MCP connection.
 
 ## What Factor Mining Does
 
@@ -13,9 +13,9 @@ Quandora Factor Mining helps an agent:
 5. Submit the exact validated source and follow the backtest to a terminal state.
 6. Retrieve factor cards, chart artifacts, and the raw signal artifact when available.
 
-## What Strategy Does
+## What Strategy Building Does
 
-Quandora Strategy helps an agent:
+Quandora Strategy Building helps an agent:
 
 1. Inspect the current strategy capability contract and eligible factors.
 2. Compare factor quality and retrieve detail only for selected factors.
@@ -47,5 +47,5 @@ The strategy archive contains a redacted `run_summary.json`, verified JSON/text 
 ```text
 skills/
   factor-mining/
-  strategy/
+  strategy-building/
 ```

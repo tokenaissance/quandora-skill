@@ -1,13 +1,13 @@
 interface:
-  display_name: "Strategy"
+  display_name: "Strategy Building"
   short_description: "Compose and backtest cross-sectional strategies"
-  default_prompt: "Use $strategy to combine existing Quandora factors into a cross-sectional strategy."
+  default_prompt: "Use $strategy-building to combine existing Quandora factors into a cross-sectional strategy."
 
 dependencies:
   tools:
     - type: "mcp"
       value: "quandora"
-      description: "Quandora Strategy connection"
+      description: "Quandora Strategy Building connection"
       transport: "streamable_http"
       url: "https://mcp.quandora.ai/quant"
       oauth_resource: "https://mcp.quandora.ai/quant"

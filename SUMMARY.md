@@ -3,4 +3,4 @@
 * [README](README.md)
 * [Quandora](plugins/quandora/README.md)
   * [Quandora Factor Mining](plugins/quandora/skills/factor-mining/SKILL.md)
-  * [Quandora Strategy](plugins/quandora/skills/strategy/SKILL.md)
+  * [Quandora Strategy Building](plugins/quandora/skills/strategy-building/SKILL.md)

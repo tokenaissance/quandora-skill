@@ -1,9 +1,9 @@
 ---
-name: strategy
-description: Use when an agent should compose, submit, inspect, or archive a cross-sectional Quandora strategy from eligible factors.
+name: strategy-building
+description: Use when the user asks to list available, eligible, or selectable Strategy factors, including the bare Chinese request “列出可用因子”, or asks to compose, submit, inspect, or archive a cross-sectional Quandora strategy.
 ---
 
-# Quandora Strategy
+# Quandora Strategy Building
 
 Use this skill through the authenticated Quandora connection exposed by the host as
 `quandora`. It composes cross-sectional strategies from eligible factor ids and includes
@@ -65,6 +65,8 @@ use an alternative service path. Use host-native HTTP only for the one opaque
 or credential-paste flows.
 
 ## Workflow
+
+Bare “列出可用因子”, “可用因子”, “available factors”, “eligible factors”, “selectable factors”, “可用于策略的因子”, and requests for the Strategy factor pool route to `strategy_list_eligible_factors` by default. This action lists currently eligible/selectable cross-sectional Strategy factors. Do not ask a clarification question for those bare requests. Do not call both lists. Requests explicitly about “我的 Factor Mining 因子”, caller-owned or reusable Factor Mining factor families, stable factor history, branches, versions, or previous factor runs route to `factor_mining_list_factors` through the Factor Mining skill; that list is not a substitute for Strategy eligibility.
 
 ### 1. Prepare a Valid Submission
 
