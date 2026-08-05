@@ -47,7 +47,7 @@ before continuing:
 - Claude Desktop: add a connector named `quandora` with URL
   `https://mcp.quandora.ai/quant`, click Connect, complete browser authorization, then
   start a new chat.
-- CodeBuddy and WorkBuddy: update or reinstall the `quandora` plugin, reconnect its plugin-managed
+- CodeBuddy and the WorkBuddy China edition: update or reinstall the `quandora` plugin, reconnect its plugin-managed
   Remote MCP server, complete the host-native browser authorization flow, then start a new chat.
 
 Do not start a new authorization flow merely because an access token reached its one-hour lifetime

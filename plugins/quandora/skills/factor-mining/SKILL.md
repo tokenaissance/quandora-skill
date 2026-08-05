@@ -18,7 +18,7 @@ If the required Quandora tools are visible, continue automatically. If they are 
 - Kimi Code: run `/mcp-config login plugin-quandora:quandora`, complete the browser authorization flow, then start a new chat and check `/mcp`.
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
 - Claude Desktop: the plugin alone is not enough. Tell the user to open Settings -> Connectors, add a Connector named `quandora` with URL `https://mcp.quandora.ai/quant`, click Connect, authorize Quandora in the browser, then start a new chat.
-- CodeBuddy and WorkBuddy: update or reinstall the `quandora` plugin, reconnect its plugin-managed Remote MCP server, complete the host-native browser authorization flow, then start a new chat.
+- CodeBuddy and the WorkBuddy China edition: update or reinstall the `quandora` plugin, reconnect its plugin-managed Remote MCP server, complete the host-native browser authorization flow, then start a new chat.
 
 Do not start a new authorization flow merely because an access token reached its one-hour lifetime or because of a single authorization response while the host is refreshing. Reauthorize only when the host reports a terminal authorization failure or still requires authorization after refresh handling.
 

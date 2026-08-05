@@ -50,9 +50,9 @@ skills/
   strategy-building/
 ```
 
-## CodeBuddy and WorkBuddy
+## CodeBuddy and the WorkBuddy China edition
 
-The CodeBuddy-compatible plugin manifest registers both skills and the plugin-managed `quandora` remote HTTP MCP server. CodeBuddy and WorkBuddy handle the MCP connection and browser OAuth authorization natively. The package requires no local MCP process, Python, Node.js, API key, or credential-paste flow.
+The CodeBuddy-compatible plugin manifest registers both skills and the plugin-managed `quandora` remote HTTP MCP server. CodeBuddy and the WorkBuddy China edition handle the MCP connection and browser OAuth authorization natively. The package requires no local MCP process, Python, Node.js, API key, or credential-paste flow.
 
 ## Claude Desktop Code OAuth Launchers
 

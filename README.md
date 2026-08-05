@@ -8,7 +8,7 @@
 
 #### Quandora is building an agentic finance infrastructure that turns generic AI agents into professional quant finance agents. Quandora gives AI agents the infrastructure to research markets, generate alphas and strategies, run backtests, and produce structured reports.
 
-| AI-Native Research Workflow                 | Run the full quant research loop from Codex, Claude, Cursor, CodeBuddy, WorkBuddy, or Kimi Code: autonomous research, backtesting, strategy creation, and deployment-ready workflow.              |
+| AI-Native Research Workflow                 | Run the full quant research loop from Codex, Claude, Cursor, CodeBuddy, the WorkBuddy China edition, or Kimi Code: autonomous research, backtesting, strategy creation, and deployment-ready workflow.              |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Institutional Quant Infrastructure          | Quandora provides end-to-end infrastructure for your agent: task cards, supported data, evaluation rails, and backtesting, while your agent focuses on writing Python factor logic. |
 | Real Performance Evidence with Explanations | Get structured Factor and Strategy Reports with verdicts, metrics, risks, assumptions, and plain-English explanations.                                                              |
@@ -193,9 +193,9 @@ codebuddy plugin list --json
 
 CodeBuddy uses the plugin-managed remote HTTP MCP server and opens its native browser authorization flow when the server connects. No Python, Node.js, local MCP server, or Quandora API key is required.
 
-#### WorkBuddy
+#### WorkBuddy China edition
 
-WorkBuddy consumes the CodeBuddy-compatible marketplace and plugin manifests together with the plugin-managed `quandora` remote HTTP MCP declaration. Install or update the production plugin through WorkBuddy's plugin or custom-MCP interface, reconnect it, complete the host-native browser authorization flow, and start a new chat. Do not create a local MCP server or paste credentials.
+The WorkBuddy China edition consumes the CodeBuddy-compatible marketplace and plugin manifests together with the plugin-managed `quandora` remote HTTP MCP declaration. Install or update the production plugin through its plugin or custom-MCP interface, reconnect it, complete the host-native browser authorization flow, and start a new chat. Do not create a local MCP server or paste credentials.
 
 #### Kimi Code CLI
 
