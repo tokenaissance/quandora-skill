@@ -1,7 +1,7 @@
 {
   "name": "quandora",
-  "version": "2.0.2",
-  "description": "Quandora Factor Mining and Strategy Building workflows for AI agents.",
+  "version": "2.1.0",
+  "description": "Quandora plugin with Factor Mining and Strategy Building skills.",
   "author": {
     "name": "Varsity Tech Product",
     "url": "https://github.com/varsity-tech-product"
@@ -14,7 +14,6 @@
     "factor-mining",
     "backtesting",
     "strategy",
-    "strategy-building",
     "quant"
   ],
   "skills": "./skills/",
@@ -22,7 +21,7 @@
   "interface": {
     "displayName": "Quandora",
     "shortDescription": "Use Quandora services from your agent.",
-    "longDescription": "Quandora packages Factor Mining and Strategy Building skills in one plugin. Agents can research and backtest factors, select eligible factors, compose cross-sectional strategies, retrieve verified artifacts, and summarize results.",
+    "longDescription": "Quandora packages Factor Mining and Strategy Building skills in one plugin. Factor Mining supports tasks, sessions, factor source submission, backtests, artifact retrieval, and result summaries; Strategy Building composes and resumes cross-sectional runs from existing factors.",
     "developerName": "Varsity Tech Product",
     "category": "Productivity",
     "capabilities": [
@@ -34,7 +33,7 @@
       "Use Quandora Factor Mining to show public tasks.",
       "Use Quandora Factor Mining with my custom factor idea.",
       "Use Quandora Factor Mining to resume a run and summarize results.",
-      "Use Quandora Strategy Building to combine eligible factors into a cross-sectional strategy."
+      "Use Quandora Strategy to combine existing factors into a cross-sectional strategy."
     ],
     "brandColor": "#0F766E"
   }

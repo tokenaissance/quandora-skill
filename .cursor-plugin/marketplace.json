@@ -1,0 +1,16 @@
+{
+  "name": "quandora",
+  "owner": {
+    "name": "Varsity Tech Product"
+  },
+  "metadata": {
+    "description": "Quandora plugin marketplace for Factor Mining and Strategy Building."
+  },
+  "plugins": [
+    {
+      "name": "quandora",
+      "source": "plugins/quandora",
+      "description": "Quandora plugin with Factor Mining and Strategy Building skills."
+    }
+  ]
+}

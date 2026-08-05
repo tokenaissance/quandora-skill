@@ -49,3 +49,23 @@ skills/
   factor-mining/
   strategy-building/
 ```
+
+## CodeBuddy and the WorkBuddy China edition
+
+The CodeBuddy-compatible plugin manifest registers both skills and the plugin-managed `quandora` remote HTTP MCP server. CodeBuddy and the WorkBuddy China edition handle the MCP connection and browser OAuth authorization natively. The package requires no local MCP process, Python, Node.js, API key, or credential-paste flow.
+
+## Claude Desktop Code OAuth Launchers
+
+Claude Desktop Code Agents normally run commands with redirected input and output, while the official `claude mcp login` flow requires an interactive terminal. This plugin ships two fixed-purpose launchers:
+
+```text
+scripts/
+  claude-mcp-login-macos.sh
+  claude-mcp-login-windows.ps1
+```
+
+The macOS launcher uses `/usr/bin/script`; the Windows launcher uses Windows PowerShell 5.1 to start a native console. Both invoke only `plugin:quandora:quandora`, retain the remote MCP transport, avoid OAuth output logging, and leave browser identity and consent to the user.
+
+## Connection Recovery
+
+If the `quandora` connection is unavailable, update or reinstall the production plugin, reconnect the plugin-managed Remote MCP server, and complete the host-native browser authorization flow again. The host owns OAuth and credentials; agents never request API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, or pasted credentials.

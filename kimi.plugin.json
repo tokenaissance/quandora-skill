@@ -1,0 +1,33 @@
+{
+  "name": "quandora",
+  "version": "2.1.0",
+  "description": "Quandora plugin with Factor Mining and Strategy Building skills.",
+  "keywords": [
+    "quandora",
+    "factor-mining",
+    "backtesting",
+    "strategy",
+    "quant"
+  ],
+  "author": {
+    "name": "Varsity Tech Product"
+  },
+  "homepage": "https://github.com/varsity-tech-product/quandora-plugins",
+  "license": "Apache-2.0",
+  "skills": "./plugins/quandora/skills/",
+  "mcpServers": {
+    "quandora": {
+      "transport": "http",
+      "url": "https://mcp.quandora.ai/quant",
+      "startupTimeoutMs": 20000,
+      "toolTimeoutMs": 600000
+    }
+  },
+  "interface": {
+    "displayName": "Quandora",
+    "shortDescription": "Use Quandora services from Kimi Code.",
+    "longDescription": "Quandora packages Factor Mining and Strategy Building skills with an authenticated production MCP connection.",
+    "developerName": "Varsity Tech Product",
+    "websiteURL": "https://github.com/varsity-tech-product/quandora-plugins"
+  }
+}

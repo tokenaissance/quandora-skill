@@ -9,68 +9,56 @@ Use this skill to run Factor Mining through the authenticated Quandora connectio
 
 The agent drafts a valid Factor Mining `plugin.py`, submits the complete source inline, waits for the backtest result, fetches available artifacts, saves safe local files when the host allows it, and summarizes the outcome.
 
-Quandora access tokens expire after one hour. The host MCP client should use its stored, rotating
-refresh token automatically, so routine access-token expiry does not require another browser
-authorization and must not interrupt the workflow. Never inspect, print, copy, store, or ask for an
-access token or refresh token.
+OAuth and all credentials are handled by the host. Quandora access tokens expire after one hour, and the host MCP client should use its stored rotating refresh token automatically. Never inspect, print, copy, store, or ask the user to paste API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, service tokens, or other credentials.
 
-Call `factor_mining_status` only after the host exposes that tool. If the required Quandora tools
-are visible, continue automatically. If they are unavailable after the host has handled refresh, or
-the host reports that authorization is required, initiate the host's normal Quandora connection
-flow before stopping:
+If the required Quandora tools are visible, continue automatically. If they are not visible, tell the user to update or reinstall the current production plugin, then use the host's normal Quandora reconnect and browser re-authorization path before stopping:
 
-- Codex CLI/TUI and Codex Desktop: run `codex mcp login quandora` directly. In Codex Desktop,
-  invoke the command through the available shell or command tool; do not direct the user to
-  Connector settings or ask the user to type the command. Let the user complete the browser sign-in
-  or consent page opened by the command, then check again for `factor_mining_status` in a new chat.
-  If Desktop still does not expose the tools, fully quit and reopen it.
+- Codex CLI/TUI: run `codex mcp login quandora`. Wait for the user to complete the browser authorization flow, then check again for `fm_status`.
+- Codex Desktop: the plugin provides the Quandora connector. If the first use opens the authorization flow, wait for the user to authorize Quandora in the browser, then continue in a new chat. If the tools still are not visible, tell the user to fully quit and reopen Codex Desktop.
+- Kimi Code: run `/mcp-config login plugin-quandora:quandora`, complete the browser authorization flow, then start a new chat and check `/mcp`.
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
-- Claude Desktop: use Settings -> Connectors to connect or reconnect the Connector named
-  `quandora` at `https://mcp.quandora.ai/quant`, complete browser authorization, then start a new
-  chat.
-- OpenClaw: run `openclaw mcp login quandora` directly, complete the browser flow, then start a
-  new chat.
+- Claude Desktop: the plugin alone is not enough. Tell the user to open Settings -> Connectors, add a Connector named `quandora` with URL `https://mcp.quandora.ai/quant`, click Connect, authorize Quandora in the browser, then start a new chat.
+- CodeBuddy and the WorkBuddy China edition: update or reinstall the `quandora` plugin, reconnect its plugin-managed Remote MCP server, complete the host-native browser authorization flow, then start a new chat.
 
-Do not start a new authorization flow merely because an access token reached its one-hour lifetime
-or because of a single authorization response while the host is refreshing. Reauthorize only when
-the host reports a terminal authorization failure or still requires authorization after its refresh
-handling.
+Do not start a new authorization flow merely because an access token reached its one-hour lifetime or because of a single authorization response while the host is refreshing. Reauthorize only when the host reports a terminal authorization failure or still requires authorization after refresh handling.
 
-Do not ask for Quandora API keys, `vt_` keys, bearer tokens, service tokens, or credentials. Do not use raw HTTP calls, local helper scripts, direct internal service calls, local execution keys, or credential paste flows.
+Do not ask for Quandora API keys, `vt_` keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, service tokens, or pasted credentials. Do not use raw HTTP calls, local helper scripts, direct internal service calls, local execution keys, or credential paste flows. The only permitted direct HTTP download is consuming a short-lived Remote MCP artifact URL returned by a Factor Mining download-ticket action; never construct, modify, reuse, or persist that URL.
 
 ## Available Actions
 
-After routing has confirmed Factor Mining scope, use only the Factor Mining actions exposed by `quandora`:
+After routing has confirmed Factor Mining scope, use only the Factor Mining actions exposed by `quandora`. The artifact-ticket download exception above is only for consuming returned artifact bytes; it is not permission to call a service API directly.
 
-- `factor_mining_status`
-- `factor_mining_list_factors`
-- `factor_mining_get_factor_history`
-- `factor_mining_list_public_tasks`
-- `factor_mining_get_plugin_contract`
-- `factor_mining_create_task_session`
-- `factor_mining_create_custom_session`
-- `factor_mining_validate_plugin_source`
-- `factor_mining_request_dedup_context`
-- `factor_mining_upload_backtest_wait`
-- `factor_mining_resume_run`
-- `factor_mining_get_backtest_window_cards`
-- `factor_mining_create_backtest_png_download_ticket`
-- `factor_mining_create_backtest_raw_artifact_download_ticket`
-- `factor_mining_get_backtest_png_artifact_chunk`
-- `quandora_get_guidance`
+- `fm_status`
+- `fm_list_factors`
+- `fm_get_history`
+- `fm_list_tasks`
+- `fm_get_contract`
+- `fm_task_session`
+- `fm_custom_sess`
+- `fm_validate`
+- `fm_dedup_context`
+- `fm_run_backtest`
+- `fm_resume_run`
+- `fm_window_cards`
+- `fm_png_ticket`
+- `fm_raw_ticket`
+- `fm_png_chunk`
+- `qd_get_guidance`
 
-Some hosts may prefix action names with the server name, such as `quandora__factor_mining_status`. Treat those as the same actions.
+Some hosts may prefix action names with the server name, such as `quandora__fm_status`. Treat those as the same actions.
 
 ## Plugin Construction Contract
 
-Before writing `plugin.py`, call `factor_mining_get_plugin_contract` and use the returned `plugin_contract` as the source of truth for Python inputs, C# runtime expressions, runtime globals, and horizon defaults.
+Before writing `plugin.py`, call `fm_get_contract` and use the returned `plugin_contract` as the source of truth for Python inputs, C# runtime expressions, runtime globals, and horizon defaults.
 
 - Use `plugin_contract.allowed_data` to decide which input columns the factor may use.
-- Use `plugin_contract.fwd_period` after the contract is returned. For custom ideas, set `task_payload.fwd_period` to `7` unless the user explicitly asks for another supported horizon.
+- Use `plugin_contract.fwd_period` after the contract is returned. For custom ideas, pass `fwd_period: 7` to `fm_custom_sess` unless the user explicitly asks for another supported horizon.
 - Use `plugin_contract.data_columns[].python_kwarg` for `build_signal` parameters.
-- For every C# runtime queue/buffer enqueue and every numeric C# runtime expression, use the matching `plugin_contract.data_columns[].csharp_double_expression`.
+- Whenever C# reads a market-data column from `bar`, including every extra-buffer enqueue, use the matching `plugin_contract.data_columns[].csharp_double_expression`. Do not use `bar` expressions inside `__FACTOR_COMPUTE_BODY__`; that section can use only the variables listed by its contract, normally `prices`, canonical extra-buffer arrays, `rawSignal`, and factor-owned fields.
 - Follow `plugin_contract.runtime_rules` for required globals, `FACTOR_SECTIONS`, runtime variant, leak rules, extra-buffer rules, and reserved identifiers.
 - When an additional runtime column is needed, use its matching `plugin_contract.runtime_rules.extra_buffer.column_patterns` entry. Copy that entry's field, enqueue, dequeue, and to-array snippets exactly into the corresponding `FACTOR_SECTIONS` values; do not reconstruct or normalize the snippets.
+
+When `plugin_contract.runtime_rules.factor_sections.all_values_must_be_string_literals` is true, every `FACTOR_SECTIONS` value must be a static string literal. In particular, write `"__FACTOR_TYPE__": "my_factor_type"`, not `"__FACTOR_TYPE__": FACTOR_TYPE`. Keep the top-level `FACTOR_TYPE` literal and the duplicated `__FACTOR_TYPE__` literal byte-for-byte identical. Name factor-owned C# identifiers with `plugin_contract.runtime_rules.csharp_runtime_rules.factor_owned_identifier_prefix` when that rule is returned.
 
 Do not send multiple selectors in one plugin-contract call. Do not retry an identical non-retryable request. Do not silently change the user's research mechanism after a non-retryable validation error.
 
@@ -80,10 +68,10 @@ Never infer C# bar fields, field types, decimal/double casts, runtime buffer exp
 
 Before entering a Factor Mining workflow, route the request:
 
-- Bare “列出可用因子”, “可用因子”, “available factors”, “eligible factors”, “selectable factors”, “可用于策略的因子”, and requests for the Strategy factor pool exit this skill and hand off to the Strategy Building skill. That skill calls only `strategy_list_eligible_factors` for the request. Do not first call `factor_mining_status` or `factor_mining_list_factors`, do not call both lists, and do not ask a clarification question for a bare request.
-- Requests explicitly about “我的 Factor Mining 因子”, caller-owned or reusable Factor Mining factor families, factor history, branches, versions, or previous Factor Mining runs remain in this skill and route to `factor_mining_list_factors`.
+- Bare “列出可用因子”, “可用因子”, “available factors”, “eligible factors”, “selectable factors”, “可用于策略的因子”, and requests for the Strategy factor pool exit this skill and hand off to the Strategy Building skill. That skill calls only `sb_list_eligible` for the request. Do not first call `fm_status` or `fm_list_factors`, do not call both lists, and do not ask a clarification question for a bare request.
+- Requests explicitly about “我的 Factor Mining 因子”, caller-owned or reusable Factor Mining factor families, factor history, branches, versions, or previous Factor Mining runs remain in this skill and route to `fm_list_factors`.
 
-After routing has confirmed Factor Mining scope, call `factor_mining_status` exactly once at the start of the normal Factor Mining workflow. If authorization is missing or the tools are not exposed, follow the product connection flow above. Do not ask the user for direct keys.
+After routing has confirmed Factor Mining scope, call `fm_status` exactly once at the start of the normal Factor Mining workflow. If authorization is missing or the tools are not exposed, use the host's Quandora connection path: desktop hosts use their Connector settings, while CLI/TUI hosts use their MCP login command. Do not ask the user for direct keys.
 
 Before routing to factor creation, recognize intentional reuse and history intent. If the user asks
 about existing factors, stable versions, prior successful factors, factor evolution, or past runs,
@@ -91,10 +79,10 @@ follow the reuse workflow below. Otherwise keep the existing creation workflow u
 
 ### Approved Guidance
 
-Use `quandora_get_guidance` only when approved product semantics are needed. It accepts only a
+Use `qd_get_guidance` only when approved product semantics are needed. It accepts only a
 known `guide_id`; request only relevant `sections`, pass `if_guide_revision` when revalidating a
-previous response, and honor a not-modified response without fabricating content. The guide ids
-used by this workflow are:
+previous response, and honor a not-modified response without fabricating content. The known ids
+are:
 
 - `operation.factor.history.read`
 - `operation.result.read`
@@ -105,16 +93,16 @@ Guidance or invent a guide id.
 
 ### Intentional Reuse and History
 
-1. `factor_mining_list_factors` lists caller-owned reusable Factor Mining factor families; it is
+1. `fm_list_factors` lists caller-owned reusable Factor Mining factor families; it is
    not the Strategy eligible-factor pool. Call it first and show compact factor-family rows. Omit
    `page_size` unless pagination is needed; when present it must be an integer from 1 through 20.
    Do not hydrate or fetch history for every row. A failed list call is an error, not an empty
    result. Never claim zero factors unless a successful response contains an empty `items` array.
    After a list error, stop that read workflow. Do not call
-   `factor_mining_get_factor_history` as a fallback.
+   `fm_get_history` as a fallback.
 2. Ask the user to select an exact `factor_id` returned by a successful
-   `factor_mining_list_factors` response for the current caller. Only after that explicit selection
-   call `factor_mining_get_factor_history`. Never substitute a backtest `run_id`, `job_id`,
+   `fm_list_factors` response for the current caller. Only after that explicit selection
+   call `fm_get_history`. Never substitute a backtest `run_id`, `job_id`,
    `plugin_id`, `session_id`, PB `intake_result.factor.factor_id`, Strategy top-level compatibility
    selector, Strategy admission ID, or any locally cached ID.
 3. Start with the default `summary` view. Request only the controlled `branches`, `versions`, or
@@ -123,10 +111,10 @@ Guidance or invent a guide id.
    - `branches`: may use `branch_id` plus `page_size` / `page_token`; do not send `version_id`.
    - `versions`: may use `branch_id` or `version_id` plus `page_size` / `page_token`.
    - `runs`: may use `version_id` plus `page_size` / `page_token`; do not send `branch_id`.
-4. Use only returned metadata and run summaries. Factor history does not provide historical source
-   code for reading or editing. Do not use a local cache or another service as a substitute.
+4. Use only returned metadata and run summaries. Historical source reading and editing are not
+   exposed by this plugin. Do not read a local cache, call another service, or devise a workaround.
 
-When controlled history semantics are needed, call `quandora_get_guidance` with
+When controlled history semantics are needed, call `qd_get_guidance` with
 `operation.factor.history.read`, only the relevant `sections`, and `if_guide_revision` when
 revalidating a previous response. Honor a not-modified response without fetching unrelated
 Guidance.
@@ -136,10 +124,10 @@ factor. Never treat browsing history as permission to edit or resubmit historica
 
 Determine whether the user wants a public task or a custom idea:
 
-- For a public task: call `factor_mining_list_public_tasks`, show concise choices, and select one exact public `task_id`, asking the user to pick unless they explicitly ask the agent to choose. Either call `factor_mining_get_plugin_contract` with only that exact `task_id` before creating the task session and then create the session for that same task, or create the session first with `factor_mining_create_task_session` and call `factor_mining_get_plugin_contract` with only the returned `session_id`.
-- For a custom idea: before creating a session, call `factor_mining_get_plugin_contract({})` exactly once to read the global construction and data-column contract. Prepare a clear title, category, description, non-empty `allowed_data`, and `fwd_period` for `factor_mining_create_custom_session`, using only exact column names returned by the global contract's `plugin_contract.allowed_data`, including `close`, `volume`, `funding_rate_close`, or `open_interest_close` only when returned. Use `fwd_period: 7` unless the user explicitly asks for another supported horizon. Create the custom session, then call `factor_mining_get_plugin_contract` with only the returned `session_id`; treat that scoped contract as authoritative for writing and validating `plugin.py`. Never send a hand-built custom `task_payload` to `factor_mining_get_plugin_contract`.
+- For a public task: call `fm_list_tasks`, show concise choices, and select one exact public `task_id`, asking the user to pick unless they explicitly ask the agent to choose. Either call `fm_get_contract` with only that exact `task_id` before creating the task session and then create the session for that same task, or create the session first with `fm_task_session` and call `fm_get_contract` with only the returned `session_id`.
+- For a custom idea: before creating a session, call `fm_get_contract({})` exactly once to read the global construction and data-column contract. Prepare a clear title, category, description, non-empty `allowed_data`, and `fwd_period` for `fm_custom_sess`, using only exact column names returned by the global contract's `plugin_contract.allowed_data`, including `close`, `volume`, `funding_rate_close`, or `open_interest_close` only when returned. Use `fwd_period: 7` unless the user explicitly asks for another supported horizon. Create the custom session, then call `fm_get_contract` with only the returned `session_id`; treat that scoped contract as authoritative for writing and validating `plugin.py`. Never send a hand-built custom `task_payload` to `fm_get_contract`.
 
-After either branch returns its scoped contract, continue through the single shared `plugin.py` writing, deduplication, validation, upload, resume/polling, and artifact/archive workflow below.
+After either branch returns its scoped contract, continue through the single shared plugin.py writing, deduplication, validation, upload, resume/polling, and artifact/archive workflow below.
 
 Do not write `plugin.py` until the plugin construction contract has been returned. If the contract cannot be fetched, stop and report that plugin authoring is blocked by missing contract metadata.
 
@@ -150,9 +138,9 @@ Quandora result/factor-mining/aggressive_flow_exhaustion_reversal/
 Quandora result/factor-mining/aggressive_flow_exhaustion_reversal/artifacts/
 ```
 
-Use only the factor slug as the canonical archive directory. The latest run for a factor updates that factor's folder. Keep session and run ids only inside `run_summary.json` / `artifact_manifest.json` when they are needed for traceability, not in the user-facing directory name.
+Use only the factor slug as the canonical archive directory. The latest run for a factor updates that factor's folder. When traceability requires them, the current `session_id` and `run_id` are the only downstream IDs that may be saved, and only inside local `run_summary.json` / `artifact_manifest.json`; never put them in the user-facing directory name or response.
 
-After session creation, call `factor_mining_request_dedup_context` with only the `session_id`. Use `query_mode`, `scope`, `memory_stats`, `similar_factors`, and `task_memory_pressure` only to select a fresher research hypothesis. A high `task_memory_pressure` must never stop the workflow, reject a draft, or trigger repeated rewrites.
+After session creation, call `fm_dedup_context` with only the `session_id`. Use `query_mode`, `scope`, `memory_stats`, `similar_factors`, and `task_memory_pressure` only to select a fresher research hypothesis. A high `task_memory_pressure` must never stop the workflow, reject a draft, or trigger repeated rewrites.
 
 Before drafting, form a concise research thesis. For public tasks, stay inside the task's economic direction and allowed data. For custom ideas, stay inside the user's stated idea. Consider two or three plausible mechanisms, then choose the one with the clearest economic rationale, the best fit to the plugin contract, and the least overlap with the returned task memory. Prefer genuinely different mechanisms over parameter variants of the same formula.
 
@@ -163,9 +151,9 @@ Create or locate one `plugin.py` source:
 - In local coding hosts with a writable workspace, save the submitted source as `plugin.py` inside the run archive. Read the file back and submit the full contents as inline `plugin_source`.
 - In chat-only hosts without file writes, keep the generated source in the conversation/tool-call context and submit it directly as inline `plugin_source`.
 
-When writing `plugin.py`, keep `build_signal` inputs aligned with `plugin_contract.data_columns[].python_kwarg`. Keep `FACTOR_SECTIONS` runtime code aligned with the same columns, and use only `plugin_contract.data_columns[].csharp_double_expression` for numeric runtime references to market data columns.
+When writing `plugin.py`, keep `build_signal` inputs aligned with `plugin_contract.data_columns[].python_kwarg`. Keep `FACTOR_SECTIONS` runtime code aligned with the same columns. Use each column's `csharp_double_expression` only at runtime sites where `bar` is visible, such as canonical extra-buffer enqueue snippets; inside `__FACTOR_COMPUTE_BODY__`, use `prices` and canonical extra-buffer arrays instead.
 
-After a concrete `plugin.py` exists and before validation or upload, call `factor_mining_request_dedup_context` again with the `session_id`, source, and concise factor metadata:
+After a concrete `plugin.py` exists and before validation or upload, call `fm_dedup_context` again with the `session_id`, source, and concise factor metadata:
 
 ```json
 {
@@ -180,34 +168,70 @@ After a concrete `plugin.py` exists and before validation or upload, call `facto
 
 Use `draft_duplicate_risk` as the only duplicate-risk verdict. When it identifies a concrete overlap with an existing factor's core mechanism, revise the candidate so its economic hypothesis, inputs, or formula family are materially different, then check the revised draft again. A medium or high score is not a hard gate only when the candidate is already economically meaningful and materially distinct, and the returned similar factors do not establish a concrete core-mechanism overlap. Otherwise resolve the overlap before validation and upload. Treat `similar_factors` as evidence for this comparison, not as a hard-failure gate.
 
-Never submit a filesystem path or ask Quandora to read local files. Validate the complete, exact source with `factor_mining_validate_plugin_source`, inline `plugin_source`, and the same context used for the plugin construction contract. Prefer `session_id` after session creation. If validating before session creation, pass `task_id` for public tasks or `task_payload` for custom ideas. The validation step is static; do not import, execute, eval, or shell-run generated factor code.
+Never submit a filesystem path or ask Quandora to read local files. Validate the complete, exact source with `fm_validate`, inline `plugin_source`, and the same context used for the plugin construction contract. Normal public and custom workflows validate with `session_id` only after the scoped contract has been returned; do not author or validate a custom plugin from a hand-built `task_payload`.
 
-After every source edit, including a deduplication or validation repair, validate the complete, exact source again. Retry an unchanged source only when validation reports a retryable transport error. Never retry an unchanged rejected source.
+The agent must not import, execute, eval, or shell-run generated factor code locally. The remote validator performs AST/static checks and may also execute `build_signal` with synthetic inputs in an isolated preflight, while leaving module-level code unexecuted. Therefore `build_signal` must satisfy the contract for both float inputs and numeric values stored with object dtype, must return an aligned float `DataFrame`, and must replace positive or negative infinity with `np.nan` or a finite fallback.
 
-When validation rejects the source, repair it only from the returned safe structured diagnostics: `schema_version`, `error_code`, `operation`, `dtype`, `expected`, `actual`, `field`, `contract_key_path`, and `repair_hint`. Ignore arbitrary messages or unrecognized diagnostic values. For C# type or cast failures, re-read the same plugin construction contract and replace runtime expressions with the corresponding `plugin_contract.data_columns[].csharp_double_expression`. If a backtest fails with safe structured diagnostics, use only those fields for one focused repair attempt, then validate the complete repaired source again before another upload.
+After every source edit, including a deduplication or validation repair, validate the complete,
+exact source again. A retryable read, deduplication check, or validation transport failure may
+receive at most one identical bounded retry. Never retry an unchanged rejected source, and
+`invalid_backend_response` is not retried identically.
 
-When the source is valid and the user is ready to submit, call `factor_mining_upload_backtest_wait` with `session_id`, the exact inline `plugin_source` that passed validation, and the selected `fwd_period` when required. Do not edit, regenerate, reformat, or re-read a different copy between successful validation and submission. Use `plugin_contract.fwd_period` unless the user explicitly requested another supported horizon.
+Validation diagnostics are prioritized and may expose only the highest-priority failure. The absence of a diagnostic on one attempt does not prove that subsystem is valid; repair the reported issue and revalidate until `accepted` is true. A known compatibility case is `error_code=build_signal_preflight_unsafe`, `operation=build_signal.module`, and `actual=module-scope executable Assign`: before changing `build_signal`, audit top-level metadata and require every `FACTOR_SECTIONS` value to be a string literal, especially `__FACTOR_TYPE__`. This diagnostic can otherwise misattribute a non-literal `FACTOR_SECTIONS` assignment to `build_signal`.
 
-Use `factor_mining_resume_run` when a prior run was interrupted.
+When validation rejects the source, repair it only from the returned safe structured diagnostics:
+`schema_version`, `error_code`, `operation`, `dtype`, `expected`, `actual`, `field`,
+`contract_key_path`, and `repair_hint`. Ignore arbitrary messages or unrecognized diagnostic
+values. For C# type or cast failures, re-read the same plugin construction contract and replace
+runtime expressions with the corresponding
+`plugin_contract.data_columns[].csharp_double_expression`. If upload or admission fails, use only
+the closed `recovery_action` policy below; never infer a mutation retry from `retryable`.
+
+When the source is valid and the user is ready to submit, call `fm_run_backtest` with `session_id`, the exact inline `plugin_source` that passed validation, and the selected `fwd_period` when required. Do not edit, regenerate, reformat, or re-read a different copy between successful validation and submission. Use `plugin_contract.fwd_period` unless the user explicitly requested another supported horizon.
+
+### Mutation Recovery Policy
+
+Read mutation-recovery fields only from the safe error `details`. `retryable` describes service
+availability, but `recovery_action` controls mutation behavior. Never use a generic retry rule to
+upload, Start, create a replacement session, or change bound input.
+
+- `repair_and_revalidate`: repair only allowlisted safe diagnostics and revalidate the complete
+  source in the same session. Do not upload until that repaired source passes validation.
+- `create_same_kind_session_after_input_change`: do not reuse the bound pending handle. Create the
+  same kind of session with a new invocation identity: public/task-backed stays public/task-backed
+  for the exact task, and custom stays custom.
+- `retry_same_pending_request`: make at most one bounded replay with the exact same pending handle,
+  exact bound request, persisted idempotency identity, and unchanged validated source. Never create
+  a session or alter the request.
+- `resume_known_run`: resume the exact returned known `run_id`; never upload or Start again.
+- `stop_and_report_trace`: stop and report the safe `trace_id`. Do not automatically retry, rewrite
+  source, create a session, or re-upload.
+- `repair_then_create_same_kind_session`: make one allowlisted diagnostics-led repair, revalidate
+  the complete repaired source, then create the same kind of session with a new invocation identity
+  before following the ordinary validated upload path once.
+
+Normal `running` with `next_action=resume` resumes only through `fm_resume_run`; it never
+uploads or Starts again. Use `fm_resume_run` when a prior known run was interrupted.
+These recovery actions do not add an automatic retry loop.
 
 ### Waiting Policy
 
-If `upload_backtest_wait` returns `running`, call `factor_mining_resume_run` at most 4 times in the current request.
+If `upload_backtest_wait` returns `running`, call `fm_resume_run` at most 4 times in the current request.
 
-If the run is still `running` after the fourth resume, stop waiting and treat the archive as a pending run snapshot, not a completed result. Save only files that are already true at that point, such as `plugin.py` and a redacted pending run summary. Do not fetch factor cards, PNG charts, raw parquet, or artifact manifests until a later `factor_mining_resume_run` returns a terminal status. In the final response, clearly say the backtest is still running, artifacts are not available yet, and the user can ask to resume later. Always print the result folder path.
+If the run is still `running` after the fourth resume, stop waiting and treat the archive as a pending run snapshot, not a completed result. Save only files that are already true at that point, such as `plugin.py` and a redacted pending run summary. Do not fetch factor cards, PNG charts, raw parquet, or artifact manifests until a later `fm_resume_run` returns a terminal status. In the final response, clearly say the backtest is still running, artifacts are not available yet, and the user can ask to resume later. Always print the result folder path.
 
 ### Artifact Handling
 
-Run artifact handling only after `factor_mining_upload_backtest_wait` or `factor_mining_resume_run` returns a terminal status such as `succeeded`, `failed`, or `cancelled`. If the run is still `running`, skip this section.
+Run artifact handling only after `fm_run_backtest` or `fm_resume_run` returns a terminal status such as `succeeded`, `failed`, or `cancelled`. If the run is still `running`, skip this section.
 
 Treat the terminal response as the run summary. After a backtest reaches a terminal state, use the window-card response as the manifest for factor cards and chart files. Also request the raw signal parquet artifact when the host exposes that tool:
 
 1. Save the redacted upload/resume result as `run_summary.json`.
-2. Call `factor_mining_get_backtest_window_cards` with `windows: ["is"]` and the bare backtest `job_id` from `run.run_id` or `run.job_ids[]`.
+2. Call `fm_window_cards` with `windows: ["is"]` and the bare backtest `job_id` from `run.run_id` or `run.job_ids[]`.
 3. Save the available returned `factor_card` to the returned `standard_local_name`: `factor_card_is.json`.
-4. For every returned `png_artifacts[].source_name`, call `factor_mining_create_backtest_png_download_ticket`. The ticket response gives a short-lived Remote MCP download URL for the PNG bytes. Download that URL directly to the returned `standard_local_path`, then verify `size_bytes` and `md5_hex` when the response provides them.
-5. Some hosts cannot download URLs directly from tool output, and a ticket may expire before it is consumed. In that case, call `factor_mining_get_backtest_png_artifact_chunk` for the same server `source_name`. Use `standard_local_path` only as the local output path. Loop with `offset=0`, `limit=262144`, decode each `content_b64` chunk, append bytes to `standard_local_path`, and stop when `next_offset` is null.
-6. Call `factor_mining_create_backtest_raw_artifact_download_ticket` with the same bare backtest `job_id` and `name: "step4/signal_raw.parquet"`. If a ticket is returned, download it directly to `signal_raw.parquet` in the factor result folder, then verify `size_bytes` and `sha256_hex` when provided.
+4. For every returned `png_artifacts[].source_name`, call `fm_png_ticket`. The ticket response gives a short-lived Remote MCP download URL for the PNG bytes. Download that URL directly to the returned `standard_local_path`, then verify `size_bytes` and `md5_hex` when the response provides them.
+5. Some hosts cannot download URLs directly from tool output, and a ticket may expire before it is consumed. In that case, call `fm_png_chunk` for the same server `source_name`. Use `standard_local_path` only as the local output path. Loop with `offset=0`, `limit=262144`, decode each `content_b64` chunk, append bytes to `standard_local_path`, and stop when `next_offset` is null.
+6. Call `fm_raw_ticket` with the same bare backtest `job_id` and `name: "step4/signal_raw.parquet"`. If a ticket is returned, download it directly to `signal_raw.parquet` in the factor result folder, then verify `size_bytes` and `sha256_hex` when provided.
 7. If the raw signal parquet ticket is unavailable, expired, or the artifact is missing, record `signal_raw.parquet` as unavailable in `artifact_manifest.json` and continue. Do not treat raw parquet unavailability by itself as a failed backtest.
 8. Save `artifact_manifest.json` listing every source artifact name, local filename, local path, window key when applicable, `size_bytes`, `md5_hex` or `sha256_hex`, download status, and any omitted or unavailable reason.
 
@@ -229,20 +253,20 @@ Quandora result/factor-mining/<factor_slug>/
 
 For API calls, use `png_artifacts[].source_name`; for local files, save to `png_artifacts[].standard_local_path`.
 
-Save PNG files from window cards through a download ticket. When the host cannot consume the ticket URL, retrieve the same artifact in chunks. Keep PNG bytes out of the conversation and record the chosen save method in `artifact_manifest.json`.
+The normal PNG save path is window cards -> download ticket -> local file. Chunked retrieval is the compatibility path for hosts that cannot consume the ticket URL. Keep PNG bytes out of the conversation and record the chosen save method in `artifact_manifest.json`.
 
 The raw signal save path is terminal run -> raw artifact download ticket -> `signal_raw.parquet` in the factor result folder. Keep parquet bytes out of the conversation and record the source artifact name, local filename, size, checksum, and download status in `artifact_manifest.json`.
 
 If a returned window card has `status` other than `available`, record the omitted or unavailable reason and continue. If a PNG download, chunk fetch, or raw signal download fails, record the failure in `artifact_manifest.json` without failing the completed run.
 
-Do not save bearer tokens, download URLs, raw service metadata, internal IDs, or credentials. If the host does not support file writes, continue the workflow and say local archiving is not available in that host.
+Do not save bearer tokens, download URLs, raw service metadata, artifact IDs, admission IDs, credentials, or any other downstream IDs. The only exception is the current `session_id` / `run_id` local-traceability allowlist described above. If the host does not support file writes, continue the workflow and say local archiving is not available in that host.
 
 ### Result Insight and Optimization
 
 Run this section only when the user asks for insight, diagnosis, explanation, or optimization. Do not add long reflection to ordinary mining requests.
 
 When result or grade semantics are needed for that request, follow the approved Guidance rules
-above and call `quandora_get_guidance` with `operation.result.read` or
+above and call `qd_get_guidance` with `operation.result.read` or
 `metric.backtest.grade` as appropriate.
 
 When interpreting a result:
@@ -288,11 +312,12 @@ Artifact folder: not available in this host
 
 ## plugin.py Contract
 
-Use this minimum shape when the user has not supplied an existing plugin. The metadata values must be static top-level literals so Quandora can parse them without executing source code.
+Use this minimum shape when the user has not supplied an existing plugin. The metadata values must be static top-level literals so Quandora can parse them without executing module-level code. The current cross-sectional runtime requires `__FACTOR_LOG__` to exist but does not inject it; keep it only as compatible metadata and do not depend on it for runtime diagnostics.
 
-```text
+```python
 from typing import Any, Dict
 
+import numpy as np
 import pandas as pd
 
 FACTOR_TYPE = "snake_case_unique_factor_type"
@@ -302,21 +327,22 @@ FACTOR_DEFAULT_PARAMS = {"window": 7}
 FACTOR_SECTIONS = {
     "__FACTOR_DESCRIPTION__": "Trailing close-to-close momentum.",
     "__FACTOR_FORMULA__": "close / close[window bars ago] - 1",
-    "__FACTOR_TYPE__": FACTOR_TYPE,
-    "__FACTOR_PARAM_FIELDS__": "        private int _window;\n",
-    "__FACTOR_INIT__": '            _window = GetIntParameter("window", 7);\n',
-    "__FACTOR_LOG__": '            Log($"[INIT] window={_window}");\n',
-    "__PRICE_WINDOW_EXPR__": "_window + 1",
+    "__FACTOR_TYPE__": "snake_case_unique_factor_type",
+    "__FACTOR_PARAM_FIELDS__": "        private int _factorWindow;\n",
+    "__FACTOR_INIT__": '            _factorWindow = GetIntParameter("window", 7);\n',
+    "__FACTOR_LOG__": '            Log($"[INIT] window={_factorWindow}");\n',
+    "__PRICE_WINDOW_EXPR__": "_factorWindow + 1",
     "__EXTRA_BUF_FIELDS__": "",
     "__EXTRA_BUF_ENQUEUE__": "",
     "__EXTRA_BUF_DEQUEUE__": "",
     "__EXTRA_BUF_TOARRAY__": "",
     "__FACTOR_COMPUTE_BODY__": """
             var n = prices.Length;
-            if (n < _window + 1) return false;
-            var past = prices[n - _window - 1];
-            if (past == 0) return false;
+            if (_factorWindow < 1 || n < _factorWindow + 1) return false;
+            var past = prices[n - _factorWindow - 1];
+            if (Math.Abs(past) < 1e-12) return false;
             rawSignal = prices[n - 1] / past - 1.0;
+            if (double.IsNaN(rawSignal) || double.IsInfinity(rawSignal)) return false;
             return true;
 """,
 }
@@ -324,19 +350,23 @@ FACTOR_SECTIONS = {
 
 def build_signal(close: pd.DataFrame, params: Dict[str, Any], **data: Any) -> pd.DataFrame:
     window = int(params.get("window", FACTOR_DEFAULT_PARAMS["window"]))
-    signal = close.pct_change(window)
+    values = close.apply(pd.to_numeric, errors="coerce").astype(float)
+    if window < 1:
+        return (values * np.nan).reindex_like(close)
+    signal = values.pct_change(window)
+    signal = signal.replace([np.inf, -np.inf], np.nan).astype(float)
     return signal.reindex_like(close)
 ```
 
-Keep `build_signal` and `FACTOR_SECTIONS` compute logic aligned. Return a `pd.DataFrame` aligned with `close`, use only current and historical data, and keep all data columns within `plugin_contract.allowed_data`.
+Keep `build_signal` and `FACTOR_SECTIONS` compute logic aligned. Return a float `pd.DataFrame` aligned with `close`, use only current and historical data, and keep all data columns within `plugin_contract.allowed_data`. The duplicated `FACTOR_TYPE` and `__FACTOR_TYPE__` strings must match exactly; never replace the section value with a reference to the top-level variable.
 
 ## Security
 
-- Use only Quandora actions for formal product workflows.
+- Use only Quandora actions for formal product workflows, except for consuming a short-lived artifact URL returned by a Factor Mining download-ticket action exactly once.
 - Never ask for API keys, auth files, user credentials, local execution keys, `vt_` keys, bearer tokens, or service tokens.
 - Never print, persist in logs, or summarize full credential values.
 - Do not call hosted generation endpoints; the active agent generates factor source in its current host session.
-- Do not call internal service URLs or generic URL/API surfaces.
+- Do not call internal service URLs or generic URL/API surfaces, and never construct a download URL. The returned Remote MCP artifact-ticket URL is the sole direct-download exception.
 - Do not import, exec, eval, or otherwise execute generated `plugin.py`.
 - Do not submit filesystem paths instead of inline `plugin_source`.
 - Do not print generated `plugin.py` source in summaries.

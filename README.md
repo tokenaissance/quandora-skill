@@ -8,7 +8,7 @@
 
 #### Quandora is building an agentic finance infrastructure that turns generic AI agents into professional quant finance agents. Quandora gives AI agents the infrastructure to research markets, generate alphas and strategies, run backtests, and produce structured reports.
 
-| AI-Native Research Workflow                 | Run the full quant research loop directly from CLI, Codex, Claude Code, or Cursor: autonomous research, backtesting, strategy creation, and deployment-ready workflow.              |
+| AI-Native Research Workflow                 | Run the full quant research loop from Codex, Claude, Cursor, CodeBuddy, the WorkBuddy China edition, or Kimi Code: autonomous research, backtesting, strategy creation, and deployment-ready workflow.              |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Institutional Quant Infrastructure          | Quandora provides end-to-end infrastructure for your agent: task cards, supported data, evaluation rails, and backtesting, while your agent focuses on writing Python factor logic. |
 | Real Performance Evidence with Explanations | Get structured Factor and Strategy Reports with verdicts, metrics, risks, assumptions, and plain-English explanations.                                                              |
@@ -112,7 +112,7 @@ Plugin: quandora@quandora
 You can also ask Codex Desktop to install and connect Quandora for you:
 
 ```
-Install Quandora from varsity-tech-product/quandora-plugins, then connect Quandora.
+Read https://github.com/varsity-tech-product/quandora-plugins/blob/main/chatgpt.md completely, then install and authenticate Quandora exactly as instructed. I will complete the required browser sign-in, MFA, or consent action when it opens.
 ```
 
 Codex may ask before running the Codex CLI setup commands. These commands install the Quandora plugin into Codex, write Codex plugin/MCP configuration, and open Quandora OAuth. They do not grant Quandora access to your local files.
@@ -132,56 +132,109 @@ codex mcp login quandora
 
 After installation or authorization, open a new chat. If Codex Desktop still does not expose Quandora tools, fully quit and reopen Codex Desktop.
 
+When a Quandora connection is unavailable, update or reinstall the production plugin, reconnect the `quandora` Remote MCP server, and complete the host-native browser authorization flow again. OAuth and credentials remain host-managed: agents must never request API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, or pasted credentials.
+
 #### Claude
 
-Claude Code:
+Claude Desktop Code supports an Agent-readable one-sentence installation flow:
+
+```text
+Read https://github.com/varsity-tech-product/quandora-plugins/blob/main/claude.md completely, then install and authenticate Quandora exactly as instructed. I will complete the required browser sign-in, MFA, or consent action when it opens.
+```
+
+The linked guide requires a new local session in the Code tab, uses the official Claude Code plugin and MCP commands, and invokes the platform-native interactive OAuth path. The normal Chat tab uses the separate Connector workflow described below.
+
+Claude Code in an interactive terminal:
 
 ```bash
 claude plugin marketplace add varsity-tech-product/quandora-plugins
 claude plugin install quandora@quandora
+claude mcp login plugin:quandora:quandora
 ```
 
-Claude Desktop requires both the Quandora plugin and the Quandora connector. After installing the plugin, manually add and connect the Connector in Claude Desktop:
+The plugin ships fixed-purpose OAuth launchers for Claude Desktop Code under `plugins/quandora/scripts/`. The macOS launcher uses the operating system's `/usr/bin/script` PTY, and the Windows launcher uses Windows PowerShell 5.1 to open a native console. Both invoke only the official `claude mcp login plugin:quandora:quandora` flow, suppress OAuth output logging, and leave browser sign-in, MFA, and consent to the user.
 
-```
+Claude Desktop's normal Chat tab uses its Connector workflow rather than the local Claude Code plugin. Add and connect:
+
+```text
 Name: quandora
 URL: https://mcp.quandora.ai/quant
 ```
 
-Use Settings -> Connectors, add the Connector above, click Connect, authorize Quandora in the browser, then start a new chat.
+Use Settings -> Connectors, click Connect, complete Quandora authorization in the browser, then start a new chat. Local result-folder archiving is guaranteed only in hosts that expose local file writes; Claude Desktop may instead provide downloadable files in its sandbox.
 
-In Claude Code, open `/mcp` and authenticate `quandora`, then start a new chat.
+#### Cursor Desktop
 
-Claude Desktop can use the connected Quandora tools in chat, but local result-folder archiving is only guaranteed in local agent environments such as Claude Code, Codex, and OpenClaw. Claude Desktop's built-in file creation uses Claude's sandbox and may provide downloadable files rather than writing directly to a chosen local folder.
+In a new Cursor Desktop Agent chat, enter:
 
-Factor Mining chart downloads use returned server `source_name` values for API calls and save local PNGs to returned `standard_local_path` values. When available, the raw signal artifact is saved as `signal_raw.parquet` in the factor result folder. Strategy artifacts use short-lived single-use download tickets and are verified before being added to the local archive.
-
-#### OpenClaw
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/HEAD/install-openclaw.sh | bash
+```text
+/add-plugin quandora@https://github.com/varsity-tech-product/quandora-plugins
 ```
 
-Authorize Quandora:
+After installation, authenticate the plugin-provided `quandora` Remote MCP server in the browser, then start a new Agent chat before invoking Factor Mining or Strategy Building.
+
+#### CodeBuddy CLI
+
+CodeBuddy CLI installs the plugin through its official plugin manager. If the standalone CLI is not installed, use the official installer for the host platform.
+
+macOS and Linux:
 
 ```bash
-openclaw mcp login quandora
+curl -fsSL https://www.codebuddy.cn/cli/install.sh | bash
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Open the printed URL, approve access, then run the code command printed by OpenClaw:
+Windows PowerShell:
+
+```powershell
+irm https://www.codebuddy.cn/cli/install.ps1 | iex
+$env:Path = "$env:USERPROFILE\AppData\Local\codebuddy\bin;$env:Path"
+```
+
+Install or update the production plugin:
 
 ```bash
-openclaw mcp login quandora --code <code>
+codebuddy plugin marketplace add varsity-tech-product/quandora-plugins --name quandora
+codebuddy plugin install quandora@quandora --scope user
+codebuddy plugin list --json
 ```
 
-Start a new OpenClaw chat after installation or authorization.
+CodeBuddy uses the plugin-managed remote HTTP MCP server and opens its native browser authorization flow when the server connects. No Python, Node.js, local MCP server, or Quandora API key is required.
+
+#### WorkBuddy China edition
+
+The WorkBuddy China edition consumes the CodeBuddy-compatible marketplace and plugin manifests together with the plugin-managed `quandora` remote HTTP MCP declaration. Install or update the production plugin through its plugin or custom-MCP interface, reconnect it, complete the host-native browser authorization flow, and start a new chat. Do not create a local MCP server or paste credentials.
+
+#### Kimi Code CLI
+
+Install the production plugin directly from GitHub:
+
+```text
+/plugins install https://github.com/varsity-tech-product/quandora-plugins
+```
+
+Confirm the source, inspect the installation, and reload plugins:
+
+```text
+/plugins info quandora
+/plugins reload
+```
+
+Start a new session, authorize the plugin-provided MCP server, and verify the connection:
+
+```text
+/mcp-config login plugin-quandora:quandora
+/mcp
+```
+
+Complete authorization in the browser, then start a new session before invoking Factor Mining or Strategy Building.
 
 ### Use Factor Mining
 
 Use the skill command when available:
 
 ```
-/factor-mining show public tasks
+/quandora:factor-mining show public tasks
 ```
 
 You can also ask naturally:
@@ -205,7 +258,8 @@ The run folder contains the submitted `plugin.py`, a redacted `run_summary.json`
 Use the skill command when available:
 
 ```text
-/strategy-building combine eligible factors into a cross-sectional strategy
+/quandora:strategy-building list available factors
+/quandora:strategy-building help me build a strategy
 ```
 
 You can also ask naturally:
