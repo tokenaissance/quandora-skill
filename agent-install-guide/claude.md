@@ -1,6 +1,6 @@
 # Install and authenticate Quandora in Claude Desktop
 
-Read this document completely, then perform the installation and authentication. Do not merely show the user commands. Ask the user to act only when the Quandora authorization page requires their sign-in, MFA, or consent.
+Read this document completely, then perform the installation, any required Claude Code CLI update, and authentication. Do not merely show the user commands or ask them to run commands. Pause for the user only when the Quandora authorization page requires their sign-in, MFA, or consent.
 
 ## Required environment
 
@@ -18,9 +18,11 @@ Use these exact production identities:
 
 Do not create a separate MCP entry. The plugin owns the MCP configuration. Never request or handle an API key, OAuth token, cookie, callback code, or authorization URL.
 
-## 1. Locate the Claude Code CLI
+## 1. Locate or update the Claude Code CLI
 
-Prefer the Claude Code executable bundled with the running Claude Desktop application. Resolve it to an absolute path and verify:
+This procedure requires Claude Code CLI `2.1.186` or later. That is the minimum version that provides the non-interactive `claude mcp login <name>` command required to start OAuth from a Claude Desktop Code session.
+
+Locate the official standalone Claude Code executable, resolve it to an absolute path, and verify:
 
 ```text
 claude --version
@@ -29,7 +31,15 @@ claude plugin install --help
 claude mcp login --help
 ```
 
-If no compatible executable is available, install the official Claude Code CLI for the current operating system.
+Do not continue to marketplace or plugin installation unless the reported version is `2.1.186` or later and every command above succeeds.
+
+If Claude Code is already installed but is older or lacks `mcp login`, run the following official command yourself through the resolved executable. Do not ask the user to update it:
+
+```text
+claude install latest
+```
+
+Discard the previously resolved path, locate the executable again, and repeat all four checks. If it is still incompatible, run the official native installer for the current operating system yourself.
 
 macOS:
 
@@ -43,7 +53,7 @@ Windows PowerShell:
 irm https://claude.ai/install.ps1 | iex
 ```
 
-Resolve the installed executable, repeat the checks, and use that same absolute path for every command below. If the required commands remain unavailable, ask the user to update and fully restart Claude Desktop, recheck once, and stop if they are still unavailable.
+After installing or updating, discard any previously resolved path, locate the executable again, repeat all four checks, and use the newly resolved absolute path for every command below. Continue directly to marketplace installation when the checks pass; do not ask the user to restart Claude Desktop or open a terminal. If the minimum version or any required command remains unavailable after one installation attempt, stop and report the compatibility failure. Never install the marketplace or plugin with an incompatible CLI.
 
 ## 2. Add or refresh the Quandora marketplace
 
