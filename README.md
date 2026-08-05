@@ -112,7 +112,7 @@ Plugin: quandora@quandora
 You can also ask Codex Desktop to install and connect Quandora for you:
 
 ```
-Install Quandora from varsity-tech-product/quandora-plugins, then connect Quandora.
+Read https://github.com/varsity-tech-product/quandora-plugins/blob/main/chatgpt.md completely, then install and authenticate Quandora exactly as instructed. I will complete the required browser sign-in, MFA, or consent action when it opens.
 ```
 
 Codex may ask before running the Codex CLI setup commands. These commands install the Quandora plugin into Codex, write Codex plugin/MCP configuration, and open Quandora OAuth. They do not grant Quandora access to your local files.
@@ -135,6 +135,14 @@ After installation or authorization, open a new chat. If Codex Desktop still doe
 When a Quandora connection is unavailable, update or reinstall the production plugin, reconnect the `quandora` Remote MCP server, and complete the host-native browser authorization flow again. OAuth and credentials remain host-managed: agents must never request API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, or pasted credentials.
 
 #### Claude
+
+Claude Desktop Code supports an Agent-readable one-sentence installation flow:
+
+```text
+Read https://github.com/varsity-tech-product/quandora-plugins/blob/main/claude.md completely, then install and authenticate Quandora exactly as instructed. I will complete the required browser sign-in, MFA, or consent action when it opens.
+```
+
+The linked guide requires a new local session in the Code tab, uses the official Claude Code plugin and MCP commands, and invokes the platform-native interactive OAuth path. The normal Chat tab uses the separate Connector workflow described below.
 
 Claude Code in an interactive terminal:
 
@@ -226,7 +234,7 @@ Complete authorization in the browser, then start a new session before invoking 
 Use the skill command when available:
 
 ```
-/factor-mining show public tasks
+/quandora:factor-mining show public tasks
 ```
 
 You can also ask naturally:
@@ -250,7 +258,7 @@ The run folder contains the submitted `plugin.py`, a redacted `run_summary.json`
 Use the skill command when available:
 
 ```text
-/strategy-building combine eligible factors into a cross-sectional strategy
+/quandora:strategy-building combine eligible factors into a cross-sectional strategy
 ```
 
 You can also ask naturally:
