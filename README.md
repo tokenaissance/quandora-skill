@@ -258,7 +258,8 @@ The run folder contains the submitted `plugin.py`, a redacted `run_summary.json`
 Use the skill command when available:
 
 ```text
-/quandora:strategy-building combine eligible factors into a cross-sectional strategy
+/quandora:strategy-building list available factors
+/quandora:strategy-building help me build a strategy
 ```
 
 You can also ask naturally:
