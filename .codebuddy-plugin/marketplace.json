@@ -4,19 +4,22 @@
     "name": "Varsity Tech Product",
     "url": "https://github.com/varsity-tech-product"
   },
-  "description": "Quandora plugin marketplace for Factor Mining and Strategy Building.",
-  "version": "2.1.0",
+  "description": "Quandora plugin marketplace for Factor Mining, Factor Analysis, Strategy Building, Strategy Analysis, and Paper Trading.",
+  "version": "3.0-preview",
   "plugins": [
     {
       "name": "quandora",
-      "description": "Quandora plugin with Factor Mining and Strategy Building skills.",
-      "version": "2.1.0",
+      "description": "Quandora plugin for factor and strategy creation, analysis, and simulated Paper Trading.",
+      "version": "3.0-preview",
       "source": "./plugins/quandora",
       "category": "Productivity",
       "tags": [
         "quandora",
         "factor-mining",
+        "factor-analysis",
         "strategy-building",
+        "strategy-analysis",
+        "paper-trading",
         "quant"
       ],
       "strict": true

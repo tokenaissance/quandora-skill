@@ -14,7 +14,7 @@ Use these exact production identities:
 - Plugin: `quandora@quandora`
 - Plugin-managed MCP server: `plugin:quandora:quandora`
 - MCP URL: `https://mcp.quandora.ai/quant`
-- Skills: `factor-mining` and `strategy-building`
+- Skills: `factor-mining`, `factor-analysis`, `strategy-building`, `strategy-analysis`, and `paper-trading`
 
 Do not create a separate MCP entry. The plugin owns the MCP configuration. Never request or handle an API key, OAuth token, cookie, callback code, or authorization URL.
 
@@ -99,7 +99,7 @@ claude plugin update quandora@quandora --scope user
 claude plugin enable quandora@quandora --scope user
 ```
 
-Confirm that the plugin is enabled and exposes both expected skills and the plugin-managed MCP server.
+Confirm that the plugin is enabled and exposes all five expected skills and the plugin-managed MCP server.
 
 ## 4. Start OAuth authorization
 
@@ -158,7 +158,7 @@ Report success only when all of the following are true:
 
 1. `quandora@quandora` is installed, enabled, and user-scoped from the expected marketplace.
 2. Its installed version matches the current marketplace entry.
-3. Both `factor-mining` and `strategy-building` are present.
+3. `factor-mining`, `factor-analysis`, `strategy-building`, `strategy-analysis`, and `paper-trading` are present.
 4. `plugin:quandora:quandora` points to `https://mcp.quandora.ai/quant` over remote HTTP.
 5. OAuth is complete and the MCP server is connected.
 

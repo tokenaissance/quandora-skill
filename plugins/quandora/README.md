@@ -1,58 +1,52 @@
 # Quandora
 
-Quandora provides Factor Mining and Strategy Building skills through one authenticated Remote MCP connection.
+Quandora provides Factor Mining, Factor Analysis, Strategy Building, Strategy Analysis, and Paper Trading through one authenticated Remote MCP connection.
 
-## What Factor Mining Does
+## Factor Mining
 
-Quandora Factor Mining helps an agent:
+Factor Mining lists public tasks or creates a custom research session, generates contract-compliant `plugin.py` source, runs server-side validation and backtesting, and retrieves one verified FM-owned Result Bundle ZIP when the host supports local files.
 
-1. Connect to the user's Quandora account through the host's MCP authorization flow.
-2. Inspect reusable factor families and controlled factor history.
-3. Select a public factor-mining task or create a custom factor session.
-4. Generate and validate a contract-compliant `plugin.py`.
-5. Submit the exact validated source and follow the backtest to a terminal state.
-6. Retrieve factor cards, chart artifacts, and the raw signal artifact when available.
+## Factor Analysis
 
-## What Strategy Building Does
+Factor Analysis is a read-only workflow over owner-scoped server-persisted evidence. It resolves one exact result, checks the server Factor Card's Health and rating evidence, reads bounded chart data, and treats job-linked source as inert text when mechanism diagnosis requires it. It never requires a local ZIP, Python runtime, notebook, or archive-inspection script.
 
-Quandora Strategy Building helps an agent:
+## Strategy Building
 
-1. Inspect the current strategy capability contract and eligible factors.
-2. Compare factor quality and retrieve detail only for selected factors.
-3. Add an approved shared factor or import a complete factor plugin.
-4. Build a cross-sectional strategy from equal or custom factor weights.
-5. Apply user-selected settings or contract defaults for direction and ranking.
-6. Submit, monitor, and archive the strategy run and its verified artifacts.
+Strategy Building lists eligible factors with authoritative source labels, composes cross-sectional strategies, submits and monitors runs, and retrieves one verified Strategy Result Bundle ZIP. Official factors use their exact admitted factor, version, and job references through the versioned source workflow.
+
+## Strategy Analysis
+
+Strategy Analysis pairs the canonical owner-scoped Strategy run snapshot with retained server artifacts and bounded six-chart numerical data. It diagnoses performance, risk, turnover, exposure, style, and implementation evidence, then proposes controlled experiments without automatically creating a run or starting Paper Trading.
+
+## Paper Trading
+
+Paper Trading prepares or selects eligible owner-scoped sources and supports confirmed single-strategy and static independent-sleeve Strategy Portfolio Paper workflows. It can start, monitor, inspect, and terminally stop simulated runs; read current PnL, closed position history, fills, funding, equity, and bounded strategy code; and never places live-money trades or automatically changes another workflow.
 
 ## Result Files
 
-When the host supports local files, Factor Mining archives each run under:
+When local writes are available, verified bundles are stored beneath the current user's home directory:
 
 ```text
-Quandora result/factor-mining/aggressive_flow_exhaustion_reversal/
+Quandora result/factor/<factor_slug>.zip
+Quandora result/strategy/<strategy_slug>.zip
 ```
 
-The archive is named from the factor slug, preferably the generated `FACTOR_TYPE`. It contains the submitted `plugin.py`, a redacted `run_summary.json`, `factor_card_is.json` when available, `artifact_manifest.json`, PNG charts under `artifacts/is/`, and the raw signal parquet at `signal_raw.parquet` when available. API calls use the returned server `source_name`; local files use the returned `standard_local_path`.
-
-Strategy runs are archived under:
-
-```text
-Quandora result/strategy/<strategy_slug>/
-```
-
-The strategy archive contains a redacted `run_summary.json`, verified JSON/text artifacts, PNG files under `artifacts/image/`, and `artifact_manifest.json`. The agent prints absolute result and artifact paths so the user can open locally saved files directly.
+The returned remote filename remains transport metadata. The verified FM-owned ZIP is the canonical local output and is not automatically extracted, deleted, or rebuilt. Its runtime manifest is authoritative for included, pending, and omitted items. Analysis reads server evidence directly and does not use these local exports as proof of a product result.
 
 ## Skills
 
 ```text
 skills/
+  factor-analysis/
   factor-mining/
+  paper-trading/
+  strategy-analysis/
   strategy-building/
 ```
 
 ## CodeBuddy and the WorkBuddy China edition
 
-The CodeBuddy-compatible plugin manifest registers both skills and the plugin-managed `quandora` remote HTTP MCP server. CodeBuddy and the WorkBuddy China edition handle the MCP connection and browser OAuth authorization natively. The package requires no local MCP process, Python, Node.js, API key, or credential-paste flow.
+The CodeBuddy-compatible plugin manifest registers all five skills and the plugin-managed `quandora` remote HTTP MCP server. CodeBuddy and the WorkBuddy China edition handle the MCP connection and browser OAuth authorization. MCP setup and analysis require no local MCP process, Python, Node.js, API key, or credential-paste flow.
 
 ## Claude Desktop Code OAuth Launchers
 
@@ -68,4 +62,4 @@ The macOS launcher uses `/usr/bin/script`; the Windows launcher uses Windows Pow
 
 ## Connection Recovery
 
-If the `quandora` connection is unavailable, update or reinstall the production plugin, reconnect the plugin-managed Remote MCP server, and complete the host-native browser authorization flow again. The host owns OAuth and credentials; agents never request API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, or pasted credentials.
+If the `quandora` connection is unavailable, update or reinstall the Quandora plugin, reconnect the plugin-managed Remote MCP server, and complete the host-native browser authorization flow again. The host owns OAuth and credentials; agents never request API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, or pasted credentials.

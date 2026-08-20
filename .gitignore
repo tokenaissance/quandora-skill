@@ -8,6 +8,3 @@ docs/
 # Platform-native install commands are the supported path for Codex.
 install-codex.sh
 install-codex-desktop.sh
-
-# The current plugin package does not bundle visual assets.
-plugins/quandora/assets/
