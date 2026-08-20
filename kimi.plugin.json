@@ -1,12 +1,15 @@
 {
   "name": "quandora",
-  "version": "2.1.0",
-  "description": "Quandora plugin with Factor Mining and Strategy Building skills.",
+  "version": "3.0-preview",
+  "description": "Quandora plugin for factor and strategy creation, analysis, and simulated Paper Trading.",
   "keywords": [
     "quandora",
     "factor-mining",
+    "factor-analysis",
     "backtesting",
     "strategy",
+    "strategy-analysis",
+    "paper-trading",
     "quant"
   ],
   "author": {
@@ -26,7 +29,7 @@
   "interface": {
     "displayName": "Quandora",
     "shortDescription": "Use Quandora services from Kimi Code.",
-    "longDescription": "Quandora packages Factor Mining and Strategy Building skills with an authenticated production MCP connection.",
+    "longDescription": "Quandora packages Factor Mining, Factor Analysis, Strategy Building, Strategy Analysis, and Paper Trading with an authenticated MCP connection.",
     "developerName": "Varsity Tech Product",
     "websiteURL": "https://github.com/varsity-tech-product/quandora-plugins"
   }

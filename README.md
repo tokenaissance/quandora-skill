@@ -1,4 +1,4 @@
-# README
+# Quandora Plugins
 
 <div align="center"><img src=".gitbook/assets/banner.png" alt="Quandora" width="100%"></div>
 
@@ -8,7 +8,7 @@
 
 #### Quandora is building an agentic finance infrastructure that turns generic AI agents into professional quant finance agents. Quandora gives AI agents the infrastructure to research markets, generate alphas and strategies, run backtests, and produce structured reports.
 
-| AI-Native Research Workflow                 | Run the full quant research loop from Codex, Claude, Cursor, CodeBuddy, the WorkBuddy China edition, or Kimi Code: autonomous research, backtesting, strategy creation, and deployment-ready workflow.              |
+| AI-Native Research Workflow                 | Run the quant research loop from Codex, Claude, Cursor, CodeBuddy, the WorkBuddy China edition, or Kimi Code: factor research, backtesting, analysis, strategy creation, and simulated Paper Trading.             |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Institutional Quant Infrastructure          | Quandora provides end-to-end infrastructure for your agent: task cards, supported data, evaluation rails, and backtesting, while your agent focuses on writing Python factor logic. |
 | Real Performance Evidence with Explanations | Get structured Factor and Strategy Reports with verdicts, metrics, risks, assumptions, and plain-English explanations.                                                              |
@@ -20,72 +20,28 @@
 ### How It Works
 
 ```
-        +----------------------+
-        | factor mining        |<----------------+
-        +----------------------+                 |
-                  |                              |
-                  v                              |
-        +----------------------+                 |
-        | factor evaluation    |                 |
-        +----------------------+                 |
-                  |                              |
-                  v                              |
-        +----------------------+                 |
-        | factor / strategy    |                 |
-        | card                 |                 |
-        +----------------------+                 |
-                  |                              |
-                  |                              |
-                  |                              | performance decay
-                  |                              | restarts mining
-                  |                              |
-                  v                              |
-        +----------------------+                 |
-        | strategy             |                 |
-        | construction         |                 |
-        +----------------------+                 |
-                  |                              |
-                  v                              |
-        +----------------------+                 |
-        | strategy evaluation  |                 |
-        +----------------------+                 |
-                  |                              |
-                  v                              |
-        +----------------------+                 |
-        | paper trading /      |-----------------+
-        | monitoring           |
-        +----------------------+
-                  |
-                  | stable
-                  |
-                  v
-        +----------------------+
-        | supervised           |
-        | deployment           |
-        +----------------------+
-                  |
-                  v
-        +----------------------+
-        | optional live        |
-        | trading              |
-        +----------------------+
+Factor Mining -> Factor Analysis -> Strategy Building -> Strategy Analysis -> simulated Paper Trading
+      ^                |                    ^                    |
+      +----------------+                    +--------------------+
+       user-approved                         user-approved
+       factor experiment                     strategy experiment
 ```
+
+Analysis remains read-only. A factor experiment returns to Factor Mining, a composition or
+configuration experiment returns to Strategy Building, and Paper Trading starts only after a
+separate explicit user confirmation.
 
 <br>
 
-### Agents
+### Skills
 
-Each agent is named for the workflow stage it runs.
-
-| Agent                            | What it does                                                                                                               |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| **Factor Mining Agent**          | Turns an alpha-mining task into Python factor logic, checks memory for duplicates, and prepares candidates for evaluation. |
-| **Factor Evaluation Agent**      | Submits factors to Quandora, tracks server-side validation and backtests, and summarizes pass/fail results.                |
-| **Factor / Strategy Card Agent** | Produces structured cards with formulas, metrics, risks, assumptions, verdicts, and plain-English explanations.            |
-| **Strategy Construction Agent**  | Combines accepted factors into strategy candidates with portfolio logic, sizing rules, and risk constraints.               |
-| **Strategy Evaluation Agent**    | Evaluates strategy performance, drawdown, turnover, cost viability, and robustness before monitoring.                      |
-| **Paper Trading Monitor Agent**  | Monitors paper performance and restarts factor mining when performance decay is detected.                                  |
-| **Deployment Supervisor Agent**  | Keeps users in the loop for approvals, guardrails, deployment checks, and supervised rollout.                              |
+| Skill | What it does |
+| --- | --- |
+| **Factor Mining** | Creates contract-compliant factor source, runs server-side validation and backtests, and retrieves one verified Result Bundle ZIP. |
+| **Factor Analysis** | Diagnoses an exact factor result from owner-scoped server Factor Cards, Health and rating evidence, chart data, and inert job-linked source. |
+| **Strategy Building** | Lists eligible factors, composes cross-sectional strategies, submits runs, and retrieves verified Strategy Result Bundle ZIPs. |
+| **Strategy Analysis** | Pairs the canonical Strategy snapshot with retained artifacts and bounded six-chart data to diagnose performance and propose controlled experiments. |
+| **Paper Trading** | Prepares or selects eligible sources and starts, monitors, inspects, or stops simulated Paper runs after explicit confirmation. |
 
 <br>
 
@@ -95,7 +51,7 @@ Quandora Plugins is the public marketplace for Quandora agent integrations. The 
 quandora@quandora
 ```
 
-The Quandora plugin includes Factor Mining and Strategy Building skills. Local agents can research and backtest factors, inspect reusable factor history, compose cross-sectional strategies from eligible factors, retrieve verified artifacts, and save result archives in the local workspace.
+The Quandora plugin includes all five skills above through one authenticated Remote MCP connection. Analysis uses server-persisted evidence and never requires a local ZIP, Python runtime, notebook, or archive-inspection script. Factor and Strategy exports are verified FM-owned ZIP files; Paper Trading is simulated and never places live-money trades.
 
 ### Install
 
@@ -132,7 +88,7 @@ codex mcp login quandora
 
 After installation or authorization, open a new chat. If Codex Desktop still does not expose Quandora tools, fully quit and reopen Codex Desktop.
 
-When a Quandora connection is unavailable, update or reinstall the production plugin, reconnect the `quandora` Remote MCP server, and complete the host-native browser authorization flow again. OAuth and credentials remain host-managed: agents must never request API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, or pasted credentials.
+When a Quandora connection is unavailable, update or reinstall the Quandora plugin, reconnect the `quandora` Remote MCP server, and complete the host-native browser authorization flow again. OAuth and credentials remain host-managed: agents must never request API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, or pasted credentials.
 
 #### Claude
 
@@ -171,7 +127,7 @@ In a new Cursor Desktop Agent chat, enter:
 /add-plugin quandora@https://github.com/varsity-tech-product/quandora-plugins
 ```
 
-After installation, authenticate the plugin-provided `quandora` Remote MCP server in the browser, then start a new Agent chat before invoking Factor Mining or Strategy Building.
+After installation, authenticate the plugin-provided `quandora` Remote MCP server in the browser, then start a new Agent chat before invoking Factor Mining, Factor Analysis, Strategy Building, Strategy Analysis, or Paper Trading.
 
 #### CodeBuddy CLI
 
@@ -191,7 +147,7 @@ irm https://www.codebuddy.cn/cli/install.ps1 | iex
 $env:Path = "$env:USERPROFILE\AppData\Local\codebuddy\bin;$env:Path"
 ```
 
-Install or update the production plugin:
+Install or update the Quandora plugin:
 
 ```bash
 codebuddy plugin marketplace add varsity-tech-product/quandora-plugins --name quandora
@@ -203,11 +159,11 @@ CodeBuddy uses the plugin-managed remote HTTP MCP server and opens its native br
 
 #### WorkBuddy China edition
 
-The WorkBuddy China edition consumes the CodeBuddy-compatible marketplace and plugin manifests together with the plugin-managed `quandora` remote HTTP MCP declaration. Install or update the production plugin through its plugin or custom-MCP interface, reconnect it, complete the host-native browser authorization flow, and start a new chat. Do not create a local MCP server or paste credentials.
+The WorkBuddy China edition consumes the CodeBuddy-compatible marketplace and plugin manifests together with the plugin-managed `quandora` remote HTTP MCP declaration. Install or update the Quandora plugin through its plugin or custom-MCP interface, reconnect it, complete the host-native browser authorization flow, and start a new chat. Do not create a local MCP server or paste credentials.
 
 #### Kimi Code CLI
 
-Install the production plugin directly from GitHub:
+Install the Quandora plugin directly from GitHub:
 
 ```text
 /plugins install https://github.com/varsity-tech-product/quandora-plugins
@@ -227,7 +183,7 @@ Start a new session, authorize the plugin-provided MCP server, and verify the co
 /mcp
 ```
 
-Complete authorization in the browser, then start a new session before invoking Factor Mining or Strategy Building.
+Complete authorization in the browser, then start a new session before invoking Factor Mining, Factor Analysis, Strategy Building, Strategy Analysis, or Paper Trading.
 
 ### Use Factor Mining
 
@@ -245,13 +201,21 @@ Use Quandora Factor Mining with my custom factor idea.
 Use Quandora Factor Mining to resume a run and summarize results.
 ```
 
-When the host supports local files, each run is saved under a stable folder named after the factor slug:
+When the host supports local files, the verified FM-owned archive is saved under the current user's home directory with a local name derived from the user-facing factor name:
 
 ```
-Quandora result/factor-mining/aggressive_flow_exhaustion_reversal/
+Quandora result/factor/<factor_slug>.zip
 ```
 
-The run folder contains the submitted `plugin.py`, a redacted `run_summary.json`, `factor_card_is.json` when available, `artifact_manifest.json`, PNG charts under `artifacts/is/`, and `signal_raw.parquet` when available. The agent prints the result, artifact, and chart folder paths at the end of each run.
+The verified ZIP is the canonical local output and is not automatically extracted, deleted, or rebuilt. Its runtime manifest is authoritative for the exact included, pending, and omitted items, including readable partial bundles.
+
+### Use Factor Analysis
+
+```text
+/quandora:factor-analysis analyze my latest factor result
+```
+
+Factor Analysis resolves one exact run and reads its owner-scoped server Factor Card, Health and rating gates, bounded chart data, and inert job-linked source when needed. It is read-only and requires no local ZIP or Python runtime.
 
 ### Use Strategy Building
 
@@ -271,13 +235,30 @@ Use Quandora Strategy Building to combine eligible factors and show the effectiv
 Use Quandora Strategy Building to resume a run and archive its results.
 ```
 
-When the host supports local files, strategy runs are saved under:
+When a completed Strategy Result Bundle is saved locally, its path is derived from the current user-facing submitted Strategy name:
 
 ```text
-Quandora result/strategy/<strategy_slug>/
+Quandora result/strategy/<strategy_slug>.zip
 ```
 
-The run folder contains `run_summary.json`, verified JSON/text artifacts, PNG files under `artifacts/image/`, and `artifact_manifest.json`. The agent reports absolute paths for every saved result.
+The verified FM-owned Strategy ZIP is retained without automatic extraction or reconstruction.
+
+### Use Strategy Analysis
+
+```text
+/quandora:strategy-analysis analyze my latest strategy result
+```
+
+Strategy Analysis selects one exact run, pairs the canonical Product Backend snapshot with retained artifacts, reads bounded six-chart numerical data, and proposes controlled experiments. It is read-only, requires no local ZIP or Python runtime, and treats Paper readiness as advisory.
+
+### Use Paper Trading
+
+```text
+/quandora:paper-trading start a paper run
+/quandora:paper-trading show my current Paper PnL
+```
+
+Paper Trading can prepare or select an eligible owner-scoped source, run its source backtest, and start a single-strategy or static independent-sleeve Strategy Portfolio Paper run. The skill asks for explicit confirmation before submit or terminal stop, monitors lifecycle through Paper detail, and can read current PnL, closed position history, fills, funding, equity curves, and bounded strategy code. It does not place live-money trades or automatically stop, restart, or modify another workflow.
 
 ### License
 

@@ -1,7 +1,7 @@
 {
   "name": "quandora",
-  "version": "2.1.0",
-  "description": "Quandora plugin with Factor Mining and Strategy Building skills.",
+  "version": "3.0-preview",
+  "description": "Quandora plugin for factor and strategy creation, analysis, and simulated Paper Trading.",
   "author": {
     "name": "Varsity Tech Product",
     "url": "https://github.com/varsity-tech-product"
@@ -12,8 +12,11 @@
   "keywords": [
     "quandora",
     "factor-mining",
+    "factor-analysis",
     "backtesting",
     "strategy",
+    "strategy-analysis",
+    "paper-trading",
     "quant"
   ],
   "skills": "./skills/",
@@ -21,7 +24,7 @@
   "interface": {
     "displayName": "Quandora",
     "shortDescription": "Use Quandora services from your agent.",
-    "longDescription": "Quandora packages Factor Mining and Strategy Building skills in one plugin. Factor Mining supports tasks, sessions, factor source submission, backtests, artifact retrieval, and result summaries; Strategy Building composes and resumes cross-sectional runs from existing factors.",
+    "longDescription": "Quandora supports factor research and backtesting, server-evidence analysis, cross-sectional Strategy construction and diagnosis, and confirmed simulated Paper Trading workflows.",
     "developerName": "Varsity Tech Product",
     "category": "Productivity",
     "capabilities": [
@@ -32,9 +35,13 @@
     "defaultPrompt": [
       "Use Quandora Factor Mining to show public tasks.",
       "Use Quandora Factor Mining with my custom factor idea.",
-      "Use Quandora Factor Mining to resume a run and summarize results.",
-      "Use Quandora Strategy to combine existing factors into a cross-sectional strategy."
+      "Use Quandora Factor Analysis to diagnose an existing factor result.",
+      "Use Quandora Strategy Building to combine existing factors into a cross-sectional strategy.",
+      "Use Quandora Strategy Analysis to diagnose a completed strategy result.",
+      "Use Quandora Paper Trading to select an eligible source and start a simulated run after confirmation."
     ],
-    "brandColor": "#0F766E"
+    "brandColor": "#F28C00",
+    "composerIcon": "./assets/quandora.png",
+    "logo": "./assets/quandora.png"
   }
 }

@@ -1,8 +1,8 @@
 {
   "name": "quandora",
   "displayName": "Quandora",
-  "version": "2.1.0",
-  "description": "Quandora plugin with Factor Mining and Strategy Building skills.",
+  "version": "3.0-preview",
+  "description": "Quandora plugin for factor and strategy creation, analysis, and simulated Paper Trading.",
   "author": {
     "name": "Varsity Tech Product"
   },
@@ -12,15 +12,21 @@
   "keywords": [
     "quandora",
     "factor-mining",
+    "factor-analysis",
     "backtesting",
     "strategy-building",
+    "strategy-analysis",
+    "paper-trading",
     "quant"
   ],
   "category": "productivity",
   "tags": [
     "quandora",
     "factor-mining",
+    "factor-analysis",
     "strategy-building",
+    "strategy-analysis",
+    "paper-trading",
     "backtesting",
     "quant"
   ],

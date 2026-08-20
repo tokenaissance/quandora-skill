@@ -1,41 +1,55 @@
 ---
 name: strategy-building
-description: Use when the user asks to list available, eligible, or selectable Strategy factors, including the bare Chinese request “列出可用因子”, or asks to compose, submit, inspect, or archive a cross-sectional Quandora strategy.
+description: Use when the user asks to list available, eligible, or selectable Strategy factors, or asks to compose, submit, resume, retrieve, or archive a cross-sectional Quandora strategy. Route deep result diagnosis and optimization to strategy-analysis.
 ---
 
 # Quandora Strategy Building
 
+Bundled plugin version: 3.0-preview
+
 Use this skill through the authenticated Quandora connection exposed by the host as
 `quandora`. It composes cross-sectional strategies from eligible factor ids and includes
-the complete Strategy archive workflow.
+the complete Strategy Result Bundle workflow. Use `$strategy-analysis` for deep result diagnosis.
 
-OAuth and all credentials are handled by the host. Quandora access tokens expire after one hour, and the host MCP client should use its stored rotating refresh token automatically. Never inspect, print, copy, store, or ask the user to paste API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, service tokens, or other credentials.
+OAuth and all credentials are handled by the host. Quandora access tokens expire after 7 days, and the host MCP client should use its stored rotating refresh token automatically. Never inspect, print, copy, store, or ask the user to paste API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, service tokens, or other credentials.
+
+## Plugin Version Reminder
+
+On the first entry into any Quandora skill in the current conversation, if the conversation history does not already contain one successful `qd_plugin_ver` call and no earlier version-check attempt has occurred, call it once before the business entry point. Pass the bundled plugin version declared by the current skill verbatim as `installed_version`; never infer it from memory, the remote latest version, or the host name.
+
+Treat the bundled version as an opaque release label: pass it verbatim and never parse, order, or normalize it.
+
+- If `update_available=false`, continue silently.
+- If `update_available=true`, say exactly: `The latest Quandora plugin version is <latest_version>. Please update the plugin.` Then say: `A Quandora MCP access token is valid for 7 days. After 7 days, use the prompt below to ask your agent to refresh the connection; it should use automatic refresh first and CLI re-authentication only if required.` Then provide this exact copyable prompt in a fenced `text` block: `Refresh the Quandora MCP connection. If automatic refresh fails, re-authenticate it with the CLI.` Then immediately continue the user's original request.
+- If `qd_plugin_ver` is missing, disabled, invisible, or fails, do not report that the plugin is outdated, do not retry the check anywhere later in the current conversation, and continue the original request without a version message or any change to the business workflow. OAuth or connection failures continue through the existing safe connection-handling path; never bypass MCP with raw HTTP.
+- Never install, update, uninstall, or reload a plugin; execute an update command; ask whether to update; immediately start OAuth or reauthorize merely because of the version result; provide a platform-specific command in the version reminder; or delay the original request. The copyable prompt is information for the user to invoke after 7 days, not permission to run it during the version check.
+- A later entry into Factor Mining, Factor Analysis, Strategy Building, Strategy Analysis, or Paper Trading in the same conversation recognizes the prior successful version check and does not call it or remind again.
+- Treat `qd_plugin_ver` as optional for connection readiness. Its absence alone never triggers connection recovery or changes the required business-tool set.
+
+The version check is not a business action. For a normal Factor Mining workflow, check first when required above and then call `fm_status` under the existing rules. For a bare Strategy factor-list request, check first when required and then make the one business call `sb_list_eligible`. For Strategy composition, check first when required and then call `sb_get_contract` under the existing rules. All other exact call-count, pagination, and mutation constraints remain unchanged.
+
+<!-- end-plugin-version-reminder -->
 
 ## Connection and Tools
 
-Before starting, confirm that the Quandora connection is authenticated and that the actions
-needed for the requested path are visible:
+Before starting, confirm that the Quandora connection is authenticated and check only the
+actions needed for the requested path. A normal list, composition, submit, observe, and Result
+Bundle workflow uses the relevant subset of `sb_get_contract`, `sb_list_eligible`,
+`sb_factor_detail`, `sb_shared_list`, `sb_shared_add`, `sb_submit_run`, `sb_list_runs`, `sb_get_run`,
+`sb_resume_run`, `sb_bundle_ticket`, and `sb_bundle_chunk`. `sb_get_artifact` and `sb_file_ticket`
+remain legacy single-artifact compatibility actions. Use `qd_get_guidance` only for one of the
+documented guidance branches below.
 
-1. `sb_get_contract`
-2. `sb_list_eligible`
-3. `sb_factor_detail`
-4. `sb_shared_list`
-5. `sb_shared_add`
-6. `sb_import_factor`
-7. `sb_submit_run`
-8. `sb_get_run`
-9. `sb_resume_run`
-10. `sb_get_artifact`
-11. `sb_file_ticket`
-12. `fm_custom_sess`
-13. `fm_resume_run`
-14. `qd_get_guidance`
+The normal Strategy workflow must not require or call `sb_import_factor`. Import-only actions are
+not global prerequisites, and an ordinary Strategy task must continue when they are absent. Check
+import-only tool availability only after the explicit user-supplied-file branch below has been
+selected.
 
 Some hosts prefix action names with the server name, such as
 `quandora__sb_submit_run`; treat those as the same actions.
 
 If the connection or actions are unavailable, tell the user to update or reinstall the current
-production plugin, use the host-specific reconnect and browser OAuth flow, then start a new chat
+Quandora plugin, use the host-specific reconnect and browser OAuth flow, then start a new chat
 before continuing:
 
 - Codex CLI/TUI: run `codex mcp login quandora`.
@@ -50,7 +64,7 @@ before continuing:
 - CodeBuddy and the WorkBuddy China edition: update or reinstall the `quandora` plugin, reconnect its plugin-managed
   Remote MCP server, complete the host-native browser authorization flow, then start a new chat.
 
-Do not start a new authorization flow merely because an access token reached its one-hour lifetime
+Do not start a new authorization flow merely because an access token reached its seven-day lifetime
 or because of a single authorization response while the host is refreshing. Reauthorize only when
 the host reports a terminal authorization failure or still requires authorization after refresh
 handling.
@@ -60,13 +74,13 @@ bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifier
 or pasted credentials, and never
 use an alternative service path. Use host-native HTTP only for the one opaque
 `download_url` returned by
-`sb_file_ticket`; never use it for internal-service calls, raw storage,
+`sb_bundle_ticket`; never use it for internal-service calls, raw storage,
 or credential-paste flows.
 
 ## Workflow
 
-Bare “列出可用因子”, “可用因子”, “available factors”, “eligible factors”, “selectable
-factors”, “可用于策略的因子”, and equivalent Strategy factor-pool intent calls only
+Bare requests for available, eligible, or selectable Strategy factors, and equivalent Strategy
+factor-pool intent, call only
 `sb_list_eligible`. This action lists currently eligible/selectable cross-sectional
 Strategy factors.
 
@@ -81,17 +95,53 @@ For that bare available/eligible/selectable intent:
 
 Do not auto-page. Do not call `sb_get_contract`, do not call `fm_status`, and do
 not call `fm_list_factors`; do not make a second list call, and do not ask a
-clarification question for a bare request. Requests explicitly about “我的 Factor Mining 因子”,
-caller-owned or reusable Factor Mining factor families, stable factor history, branches, versions,
+clarification question for a bare request. Requests explicitly about the caller's Factor Mining
+factors, reusable Factor Mining factor families, stable factor history, branches, versions,
 or previous factor runs route to `fm_list_factors` through the Factor Mining skill; that
 list is not a substitute for Strategy eligibility.
 
+For every `sb_list_eligible` table, include a compact **Source** column and classify only from the
+returned `source_kind` and `shared` values:
+
+- `source_kind: official` with `shared: false` → **Official**.
+- `source_kind: strategy_factor` with `shared: false` → **Mine**.
+- `shared: true` with `source_kind: strategy_factor` or `factor_version` → **Shared**.
+- `source_kind: library` or an unavailable `source_kind` → **Unavailable**.
+
+Never infer source from factor name, id, category, author, or the current query. Do not make another
+list or detail call merely to classify source. An **Official** factor is read-only product
+inventory: it cannot be edited, archived, or deleted by the user. Its top-level `factor_id` is the
+canonical factor identity, but an executable versioned Strategy must bind the exact admitted
+lineage from `admission.factor_id`, `admission.factor_version_id`, and `admission.job_id`. Never send
+an Official factor through the legacy `sb_submit_run` selector path and never put its selector in
+`specification.factor_ids`.
+
+When the user selects any Official factor, route the composition to the Paper Trading skill's
+versioned source-preparation path. Pass the exact admission triples as top-level
+`factor_references` to `pt_src_create`; then pass only the returned `strategy_version_id` plus the
+closed run configuration to `pt_src_bt_submit`. Do not mix this branch with legacy factor ids or
+weights. If the required versioned-source tools are unavailable, stop before mutation and explain
+that the current MCP surface cannot safely submit Official factors; do not fall back to
+`sb_submit_run`. Source never overrides eligibility or rating.
+
 ### 1. Prepare a Valid Submission
 
-- For composition and submission operations, call `sb_get_contract` exactly once. Treat its
+- The remainder of this section is the legacy `sb_submit_run` path for selections containing no
+  Official factor. For those composition and submission operations, call `sb_get_contract` exactly
+  once. Treat its
   `contract` as the current capability boundary and its separately labeled `product_defaults` as
   the effective defaults used when corresponding submit fields are omitted. A bare factor-list
   request does not call this action.
+- Immediately after that contract response and before constructing any payload, use this exact
+  `sb_submit_run` upload whitelist:
+  `name`, `factor_ids`, `factor_weights`, `ranking`, `strategy_type`, `start_date`, `end_date`,
+  `initial_cash`, `taker_fee_rate`, `maker_fee_rate`, `rebalance_bars`, `attribution`.
+  Send exactly one of `factor_ids` or `factor_weights`. Never send `idempotency_key`, `kind`,
+  `strategy_kind`, `weighting`, `contract_revision`, `product_defaults`, `effective_profile`,
+  `composition`, or `parameters`. Idempotency is generated from trusted Auth/gateway context;
+  `kind` / `strategy_kind` are fixed to `cs`; the remaining names are semantic, response-only, or
+  local-only. If `contract.submission.caller_supplied_fields` differs from this whitelist or from
+  the tool schema, stop with a contract mismatch before constructing a payload.
 - Submit only a strategy kind whose contract entry has `submit_supported: true`. The current
   supported submission kind is cross-sectional Strategy; stop if the requested kind is unsupported.
 - Call `sb_list_eligible` for eligible cross-sectional factors. The public action is
@@ -110,15 +160,23 @@ list is not a substitute for Strategy eligibility.
   1–20):
   - `factor_ids`: unique factor ids.
   - `factor_weights`: unique `{ "factor_id": "...", "weight": <finite positive number> }` objects.
-- When configuration is omitted, apply the contract's current representation of the Product
-  defaults: equal weights using the `factor_ids` selection form, long-short neutral, and top/bottom
-  count 5. Read the exact field names, value shapes, and omission semantics from the single returned
-  contract, its `product_defaults`, and the exposed submit schema; never invent a request field or
-  enum value.
+- When configuration is omitted, leave optional caller fields omitted. Interpret the current
+  Product defaults only for effective behavior and local description: equal weights use the
+  `factor_ids` selection form, the default direction is neutral, and omitted ranking uses percentage
+  mode: long the top 20 percent and short the bottom 20 percent of the ranked universe. This is a
+  20-percent universe fraction, not 20 instruments on each side. Read exact field names, value
+  shapes, and omission semantics from the single returned contract, its `product_defaults`, and the
+  exposed submit schema; never invent a request field or enum value.
 - A user-supplied weight, direction, top/bottom count, or top/bottom percentage overrides the
   corresponding default. For custom weights, validate that ids are unique, every weight is finite
   and positive, and the total is `1.0` within `1e-6`. Preserve every other explicit supported
   option.
+- Validate every numeric value as finite and every integer as binary64-safe. Each fee rate is in
+  `[0, 0.01]`; `rebalance_bars` is an integer in `1..10000`; ranking is exactly mode `N` with a
+  positive integer value or mode `percent` with a value in `(0, 50]`. Dates are exact ISO
+  `YYYY-MM-DD` strings and explicit `end_date` must be later than the effective `start_date`.
+  Omitted `end_date` means Factor Mining's latest-data default, not a fixed or locally invented
+  date.
 - Preserve every user-selected option exactly after validating it against the current contract.
   Do not invent a date range, cash value, fee rate, or rebalance interval.
 
@@ -126,7 +184,7 @@ list is not a substitute for Strategy eligibility.
 
 Call `sb_list_eligible` with the requested filters and bounded pagination. Display a
 compact comparison table with only factor id, name, authoritative FM Task category, rating/grade
-status, and exact `cs_sharpe` labeled CS Sharpe when available. Do not include Median Sharpe,
+status, Source, and exact `cs_sharpe` labeled CS Sharpe when available. Do not include Median Sharpe,
 cross-sectional/time-series capability flags, or eligibility status in the default table, and never
 substitute `median_sharpe` for `cs_sharpe`. Treat the returned category as authoritative and an
 unavailable category as unavailable; never infer it from name, type, or tags. Grade F remains
@@ -142,8 +200,8 @@ the user to select.
 Call `sb_shared_list` and show the same compact comparison columns used for
 manual selection wherever fields are available. If admission semantics are needed, call
 `qd_get_guidance` with the known guide id
-`operation.strategy.factor.shared_admission`, requesting only relevant sections and safely using
-`if_guide_revision` when revalidating a previous response.
+`operation.strategy.factor.shared_admission` without `sections`, and safely use
+`if_guide_revision` when revalidating a previous response. This is a capability-only guide.
 
 The root-level `factor_backtest_run_id` returned by
 `sb_shared_list`, together with the exact `factor_version_id`, is the
@@ -155,22 +213,43 @@ then call `sb_list_eligible` with `include_factor_ids` containing exactly the ne
 admitted `factor_id`. Do not submit a Strategy unless that exact id is returned as currently
 eligible.
 
-#### Import
+#### Agent-mined or Agent-authored Factor Selection
 
-Import only complete inline `plugin.py` source. Reuse a real existing Factor Mining `session_id`, or
-create the appropriate custom session with `fm_custom_sess` using its exposed
-schema. Call `sb_import_factor` with only schema-declared arguments. If import semantics are
-needed, call `qd_get_guidance` with the known guide id
-`operation.strategy.factor.import`, relevant sections, and an available prior revision.
+An agent mined or authored factor always follows the canonical eligible-factor inventory; it must
+never call `sb_import_factor`. This includes `plugin.py` found inside an FM-owned Result Bundle,
+which must not be re-imported.
 
-Use only real lifecycle identifiers returned by `sb_import_factor`. If `next_action` requires
-resume, require the canonical returned `run_id` for `fm_resume_run` and follow the Factor
-Mining bounded policy of at most four resumes in the current request. Treat a returned
-`backtest_job_id` as lifecycle evidence only; if `run_id` is absent, stop rather than substitute or
-map that value. Do not invent an id mapping or add an import-status poller. Whether the factor was
-newly verified or reused, call `sb_list_eligible` with
-`include_factor_ids` containing exactly its returned factor id. Never submit a Strategy until that
-exact id appears in the current eligible list.
+- If the exact canonical factor id returned by the mining workflow is already known, make the
+  supported `sb_list_eligible` query for that exact id and require that exact row.
+- If only the exact returned factor name is known, make one bounded eligible-list query and require
+  one unique exact-name match. Do not use fuzzy name inference, partial matching, or a locally
+  cached guess.
+- If the exact factor is not returned as eligible, stop and report that state. In particular, do
+  not read its bundle or import its source as a workaround.
+
+#### User-supplied External Import
+
+Import is permitted only when all of these facts are true: the user explicitly supplied or
+attached a complete `plugin.py`; the agent did not write or mine that file; the user explicitly
+asked to use that supplied file in Strategy Building; and the current host exposes
+`sb_import_factor` and its current schema. Otherwise stay on the normal eligible-factor path.
+
+Only after this branch is selected, inspect the currently exposed schemas for `sb_import_factor`
+and any Factor Mining session action it requires. Call only schema-declared arguments; do not copy
+a backend request schema into this skill. If import semantics are needed, use the approved
+`operation.strategy.factor.import` guidance and its current invocation boundary.
+
+Before import, require a real current-owner `session_id` returned during the current workflow.
+Never derive or guess a session id from a path, filename, factor name, job id, run id, Result
+Bundle, or conversation history. If no session exists, follow the Factor Mining skill's existing
+custom-session setup through the current exposed contracts to obtain one, or stop if that
+prerequisite cannot be completed.
+
+Use only real lifecycle identifiers returned by `sb_import_factor`. If its current response says
+to resume, use only the exact returned run identifier with the current Factor Mining bounded resume
+policy; never substitute another identifier or add an import poller. After import or resume,
+require the exact returned factor to appear in the canonical eligible-factor inventory before
+using it. Never submit a Strategy until that exact factor is returned as currently eligible.
 
 #### Agent Selection
 
@@ -190,14 +269,24 @@ after validating it against the submit tool schema: trim it, require a non-empty
 within 255 characters. Otherwise derive a concise, distinguishable name from themes present in the
 selected returned display names plus the actual effective configuration: use explicit user-selected
 options where present and the advertised `product_defaults` only where omitted. For example,
-`liquidation_continuation_ls_neutral_tb5` represents returned liquidation/continuation themes,
-long-short neutral direction, and top/bottom count 5. Never invent a factor label or use a generic
-name such as `agent_neutral_percent_N_strategy`. Send the generated name as `name` and use the same
-name in the existing local archive logic.
+`liquidation_continuation_ls_neutral_tb20pct` represents returned liquidation/continuation themes,
+long-short neutral direction, and top/bottom 20 percent of the universe, not a count of 20
+instruments. Never invent a factor label or use a generic name such as
+`agent_neutral_percent_N_strategy`. Send the generated name as `name` and use the same name in the
+existing deterministic destination-slug logic.
 
 Call `sb_submit_run` exactly once with the validated selection, generated or user-supplied
 `name`, every explicit user option, and only the omitted-field default representation required by
 the returned contract and submit schema. Then observe and archive only the returned run.
+
+A minimum equal-weight submission is:
+
+```json
+{
+  "name": "Momentum neutral strategy",
+  "factor_ids": ["<exact eligible factor_id>"]
+}
+```
 
 After a valid submit response, store `result.run.id` as the sole Strategy `run_id`. Pass that exact
 value to `sb_get_run`, `sb_resume_run`, and `sb_get_artifact`. Treat
@@ -236,9 +325,9 @@ delay is observation only: do not use a local helper script, credentials, or an 
 path, and do not call `sb_resume_run` or resubmit merely to wait for archiving.
 
 If `archiveStatus` is `completed` or `partial` in the terminal snapshot or a follow-up, stop waiting
-and follow the matching retrieval procedure below. If it remains `pending` or `running` after the
-bounded wait, save the final observed run snapshot and an archive-level incomplete state only in
-`artifact_manifest.json`; do not manufacture per-artifact availability or claim a complete archive.
+and request bundle metadata. If it remains `pending` or `running` after the bounded wait, save the
+final observed run snapshot and an archive-level incomplete state only; do not request a bundle or
+manufacture item availability.
 For any other non-`completed` terminal archive status, likewise record only the archive-level state
 and safe diagnostics. The final observed main-run snapshot remains the source for `run_summary.json`.
 
@@ -258,307 +347,187 @@ For a terminal failure, use only the safe `failureDiagnostics` envelope when it 
 - When it is `unavailable`, or no `failureDiagnostics` envelope is returned, state that the
   server supplied no safe terminal diagnostic.
 
-Do not infer a source-code repair from a diagnostic and do not automatically resubmit a failed run.
+Treat a terminal run as immutable. In particular, `quantai_strategy_infra_timeout` with
+`retryable: true` means the user may explicitly choose to create a new Strategy run; it never means
+that the same terminal run can be resumed or revived. Do not call `sb_resume_run` for a terminal
+failure and do not create a replacement run without the user's informed request. For compile
+failures, attribute a factor only when the returned bounded `affectedFactors` contains that exact
+factor; an empty array means attribution is unavailable. Do not infer a source-code repair from a
+diagnostic and do not automatically resubmit a failed run.
 
-### 3. Read Requested Archive Artifacts
+### 3. Save the Strategy Result Bundle
 
-Use this single archive capability registry. `sb_get_artifact` accepts only the fifteen
-JSON/text names whose unary mode is `allowed`. The ticket action accepts all twenty-one names. The
-six PNG names are stream-only and ticket-only.
+After the Strategy main run is terminal and archive state permits bundle metadata, issue one initial
+`sb_bundle_ticket` with the exact public `result.run.id`. Pass that public PB run handle unchanged
+to `sb_bundle_ticket` and `sb_bundle_chunk`; never substitute `fmRunId` or any hidden upstream
+selector. The returned closed metadata and runtime manifest are authoritative for the immutable
+FM-owned ZIP. Treat both `available` and a persisted readable `partial` response as downloadable.
+No individual artifact is a prerequisite, and an optional item that remains unsynchronized must
+not block a readable partial. Never hardcode an artifact registry or count.
 
-| Artifact name | Format | Unary mode | Local archive name |
-| --- | --- | --- | --- |
-| `status` | JSON | allowed | `status.json` |
-| `summary` | JSON | allowed | `summary.json` |
-| `equity_curve` | JSON | allowed | `equity_curve.json` |
-| `drawdown_curve` | JSON | allowed | `drawdown_curve.json` |
-| `turnover_curve` | JSON | allowed | `turnover_curve.json` |
-| `exposure_curve` | JSON | allowed | `exposure_curve.json` |
-| `orders` | JSON | allowed | `orders.json` |
-| `charts` | JSON | allowed | `charts.json` |
-| `trades` | JSON | allowed | `trades.json` |
-| `performance` | JSON | allowed | `performance.json` |
-| `attribution` | JSON | allowed | `attribution.json` |
-| `signal_return_curves` | JSON | allowed | `signal_return_curves.json` |
-| `result` | JSON | allowed | `result.json` |
-| `logs` | text | allowed | `logs.txt` |
-| `code` | text | allowed | `code.txt` |
-| `chart1_prediction_decile.png` | PNG | forbidden | `prediction_decile.png` |
-| `chart2_style_long_short.png` | PNG | forbidden | `style_long_short.png` |
-| `chart3_style_exposure.png` | PNG | forbidden | `style_exposure.png` |
-| `chart4_decile_autocorr.png` | PNG | forbidden | `decile_autocorr.png` |
-| `chart5_prediction_style_corr.png` | PNG | forbidden | `prediction_style_corr.png` |
-| `chart6_daily_turnover.png` | PNG | forbidden | `daily_turnover.png` |
+Validate the server-provided `safe_filename` as a basename and bind it consistently across the
+selected ticket and every chunk response. It is transport metadata only and never determines the
+local display filename. Likewise bind the bundle kind, public selector, snapshot revision, content
+type, size, whole-ZIP SHA-256, and runtime manifest according to the existing closed response
+contract.
 
-When `archiveStatus == completed`, perform one complete twenty-one-artifact retrieval pass with the
-same `run_id`; visit every registry name exactly once for its artifact-state retrieval. When
-`archiveStatus == partial`, perform one bounded artifact-state pass over those same twenty-one
-names, also exactly once each. In either case, do not resubmit the Strategy run to retrieve the
-archive.
+Apply this one bounded materialization recheck before the readable-partial freshness step:
 
-1. Use `sb_get_artifact` first for concise artifacts: `status`, `summary`, `performance`,
-   `charts`, `equity_curve`, `drawdown_curve`, `turnover_curve`, `exposure_curve`, `attribution`,
-   and `signal_return_curves`.
-2. Use `sb_file_ticket` first for `orders`, `trades`, `result`, `logs`,
-   and `code`.
-3. If a concise direct read returns `ready`, use it only as the state result: obtain one download
-   ticket for that same artifact and use the ticketed bytes for the local archive rather than saving
-   the unary body. If it returns `too_large`, request that one ticket as its download fallback. Do
-   not make another unary read for it.
-4. Use `sb_file_ticket` first for every PNG. PNG artifacts must never use
-   `sb_get_artifact`, including for state discovery or fallback.
+1. If the initial metadata is `pending` with `reason_code=bundle_materializing`, treat it as a
+   valid non-readable state, not as a transport or backend failure. Do not use its revision for a
+   chunk call, create a file or `.partial`, consume a URL, retry a download ticket, or use a
+   legacy-artifact fallback.
+2. Wait at most 10 seconds with a host-native bounded wait or timer, then make exactly one fresh current `sb_bundle_ticket`
+   call with the same public PB `result.run.id` and without a
+   caller-supplied `snapshot_revision`; never use `fmRunId`. Never resubmit or resume the completed
+   Strategy run merely to make a bundle appear.
+3. If that single recheck is still `pending` with `reason_code=bundle_materializing`, stop safely
+   and tell the user the Result Bundle is still materializing and can be requested later. Never
+   loop. If it is readable `available` or persisted readable `partial`, continue with the ordinary
+   URL-first flow. If it becomes another truthful non-readable state, preserve its exact safe
+   status and reason and stop. A malformed recheck remains fail-closed.
 
-`attribution` describes predictive style exposure, not PnL contribution.
+Apply this one optional freshness step before downloading:
 
-For every artifact, use its returned source state as authoritative. A complete ticket response with
-`download_url`, `local_name`, `size_bytes`, and `sha256_hex` is the ready/downloadable state. For
-`pending`, `not_available`, `sync_failed`, `integrity_failed`, or retryable backend errors, record
-that exact source state or a bounded safe failure class and do not claim that an artifact was saved.
-During a partial archive pass, download and save only ready/downloadable artifacts; do not blindly
-retry any non-ready artifact or create a placeholder content file.
+1. If the initial ticket is persisted readable `partial` and its runtime manifest reports one or
+   more items with a pending status, wait at most 10 seconds with a short host-native wait or timer.
+   Then issue exactly one fresh current `sb_bundle_ticket` with the same public selector and
+   without `snapshot_revision`. Never loop or poll for freshness.
+2. Do not consume, reuse, display, or log the superseded ticket URL; let it expire naturally. If
+   the refresh returns a valid readable newer snapshot, select that response. If it has a transient
+   transport failure, retain the initial valid readable partial. If it is a malformed contract
+   response, fail closed instead of masking it.
+3. If the selected response remains readable `partial`, download it normally, state clearly that
+   the snapshot is partial, and report the exact runtime omissions and pending reasons from its
+   selected manifest. If the initial partial reports no pending item, do not wait or refresh. A
+   later independent user request may obtain a newer current snapshot after synchronization.
 
-`logs` and `code` are text artifacts, the six `.png` names are PNG artifacts, and the other names
-are JSON artifacts. Do not print large artifact bodies into chat.
+The bounded materialization recheck, this optional readable-partial freshness refresh, and the one
+fresh-ticket retry after a transient single-use URL failure are three separate bounds. Never
+collapse them into a loop. The freshness refresh does not consume the URL retry. Do not use legacy
+per-file tools to fill an omitted item or rebuild the selected
+immutable ZIP. Do not loop over artifact names or issue one ticket per file. Keep
+`sb_get_artifact` and `sb_file_ticket` only for a user request that explicitly asks for one
+compatibility artifact; they are not bundle-completion tools.
 
-If `sb_get_artifact` returns `RESOURCE_EXHAUSTED`, treat it as `too_large` and use the
-single ticket fallback. Never invent a download URL.
+Use this URL-first delivery once per request:
 
-### Ticket Download Procedure
+1. Require ZIP content type, non-negative size, lowercase SHA-256, and the exact safe local
+   destination `{user_home}/Quandora result/strategy/{strategy_slug}.zip`. Before creating
+   any file, create `{user_home}/Quandora result/strategy/` if needed. Write only to
+   `{user_home}/Quandora result/strategy/{strategy_slug}.zip.partial` until verification finishes. If the final path
+   already contains unrelated bytes or cannot be proven to match the selected ZIP, do not
+   overwrite it silently: tell the user and use a different safe user-facing slug chosen with the
+   user, never an internal backend identifier.
+2. Immediately consume the selected `download_url` in the same execution context that receives it:
+   pass it unchanged to the host-native HTTP downloader and stream the response directly to the
+   task-created `.partial`, maintaining byte count and SHA-256. Never delete, redact, clear, or
+   transform the URL before the HTTP attempt, and do not split ticket parsing and URL consumption
+   across unrelated commands or agent turns. This returned URL is an approved short-lived transfer
+   capability, not a value to redact before use. Its transient appearance in the ticket response
+   and host download-tool invocation is safe and expected. Do not copy it into a persistent file or
+   diagnostic log, or retain it after the attempt; it need not be repeated in the final summary.
+3. Do not declare the URL unavailable unless an actual HTTP download attempt was made and returned
+   a network-policy, expiry, transport, or non-success HTTP failure. After one such transient URL
+   failure, issue at most one fresh ticket and immediately consume its new URL for one retry. After
+   that actual retry fails, move to MCP fallback. Never reuse a single-use URL/ticket.
+4. Verify exact size and SHA-256, ZIP magic/openability, and safe relative ZIP entry paths, then
+   atomically rename the verified `.partial` to `{user_home}/Quandora result/strategy/{strategy_slug}.zip`.
 
-For every initially ready artifact, use exactly one newly issued ticket: a ticket-first call is that
-issuance; a direct-read `ready` or `too_large` needs one call to
-`sb_file_ticket` with the stored `run_id` and archive name. Then:
+If the URL is unavailable, blocked by local host network policy, expired, or fails after that one retry, automatically use `sb_bundle_chunk` with the same exact public `result.run.id` and `snapshot_revision`. The fallback uses the already-working authenticated MCP connection and requires no new host-native file sink or shell network access.
 
-1. Only when that ticket response contains complete download metadata (including its opaque
-   `download_url`), download it with host-native HTTP. Do not edit the URL, follow it to any other
-   host, print it, or store it in a local file.
-2. For JSON/text, write bytes to `artifacts/<local_name>.partial` beside the final file. Keep every
-   PNG in the dedicated `artifacts/image/` subdirectory: first require the ticket metadata to contain
-   the registry's exact artifact name as `local_name` and `image/png` as its content type. Resolve
-   that artifact through the registry's explicit local archive name, create the image directory
-   before the first PNG write, then write to
-   `artifacts/image/<local archive name>.partial`. Do not derive a local filename from any
-   unrecognized server value.
-3. Verify every `.partial` file's byte count and SHA-256 against `size_bytes` and `sha256_hex` from
-   the ticket response. For PNG, also require its first eight bytes to be the PNG signature
-   `89 50 4e 47 0d 0a 1a 0a`.
-4. Atomically rename the verified `.partial` file to its registry path; for PNG this is
-   `artifacts/image/<local archive name>`. On any download, signature, size, hash, filename, or
-   content-type failure, delete the `.partial` file and record only a bounded safe failure class.
-5. Never reuse a ticket after any attempt. For one transient failure before a verified rename,
-   delete the `.partial` file, request one new ticket for that artifact, and make at most one bounded
-   download retry. A second failure, an integrity mismatch, or any non-transient failure is final for
-   this archive pass.
+1. Start at offset `0` and request at most `262,144` raw bytes per call. For every valid response, decode and append `content_b64` before acting on `terminal`; never print or log the base64. A `terminal: true` response may carry the final non-empty `content_b64`, so those bytes are part of the ZIP and must be appended before stopping. When `terminal` is false, require `next_offset` to equal the current offset plus the decoded byte length and continue from exactly that value. When `terminal` is true, require `next_offset` to be null and the appended total to equal `size_bytes`; do not request another public empty chunk.
+2. Enforce the 10 MiB ZIP cap and at most 40 chunk calls. Keep every response bound to the same kind, public run ID, snapshot revision, filename, content type, size, and whole-object SHA. Never mix revisions or append an old partial. Do not start a local receiver that exits when its setup command reaches EOF; use a per-response binary-safe append operation, or keep one verified writer session open until the terminal response has been appended.
+3. The public chunk contract's `terminal: true` means that response ends the stream; the client must not require `content_b64` itself to be empty and must not request an extra empty response. After appending the terminal response, verify the assembled byte count, whole-ZIP SHA-256, ZIP magic/openability, and safe entry paths before atomic rename. On interruption or any terminal fallback failure, discard only the task-created unverified `.partial` and report that no verified ZIP was saved.
 
-The ticket is short-lived and single-use. Never place its value, `download_url`, internal host,
-storage details, or a credential in `artifact_manifest.json`, `run_summary.json`, chat output, or a
-user-facing summary.
+After the bounded materialization recheck when applicable, if the selected bundle metadata is `pending`, `not_available`, or `integrity_failure`, stop before URL/chunk/file creation: no URL, no chunk, no fabricated file. Preserve its safe status/reason and do not invent a completed bundle.
 
-## Local Result Archive
+Preserve the verified ZIP as the canonical local output. Do not automatically extract the ZIP,
+delete it, re-ZIP it, rename its entries, synthesize missing files, or reconstruct a replacement
+archive from individual files. Do not modify ZIP entry timestamps: stable entry timestamps belong
+to the FM-owned archive, and the agent must not rebuild the ZIP to change how a file browser
+displays them. Normal logs may be present; when the manifest truthfully omits a log because FM
+detected concrete prohibited credential or storage-topology content, preserve that omission and do
+not bypass it. Do not hardcode an artifact registry, item count, entry-name list, backend commit,
+safe-filename UUID pattern, or FM storage implementation. Existing immutable snapshot revisions
+are not expected to gain later parity fixes; acceptance of those fixes uses a fresh snapshot.
 
-When the host can write local files, create one deterministic local archive for the strategy.
-Build its local-only `<strategy_slug>` only after the selected eligible factors and final
-`sb_submit_run` parameters are known. Use the actual display names returned for the selected
-eligible factors; never invent factor labels.
+## Local Result Destination
 
-Normalize each readable name to a lowercase ASCII filesystem slug by replacing each run of
-non-`[a-z0-9]` characters with one underscore and trimming outer underscores. Truncate every
-readable slug segment to at most 48 characters after normalization. Use one selected factor-name
-slug when one factor is submitted, or the first two selected factor-name slugs in final submission
-order when multiple factors are submitted. If a selected factor display name normalizes to an empty
-slug, use `factor_1` or `factor_2` according to its displayed folder position. Never use a factor id
-as a readable slug or place one anywhere in the visible directory name.
+Do not assemble a separate local archive or extracted directory for the strategy. Build
+`{strategy_slug}` only from the current user-facing submitted Strategy name, whether user-supplied
+or generated: lowercase it, replace each run of non-`[a-z0-9]` characters with one underscore,
+trim outer underscores, truncate it to at most 48 characters, and use `strategy` if the result is
+empty. The slug must not contain a backend UUID, factor id, internal selector, snapshot revision,
+remote filename prefix, fingerprint, or path separator.
 
-Create exactly this local-only fingerprint descriptor:
-
-```json
-{
-  "submit_payload": <canonical semantic copy of the exact final sb_submit_run payload>,
-  "contract_revision": "<exact contract.contract_revision>",
-  "effective_profile": {
-    "weighting": <canonical weighting object>,
-    "ranking": <resolved ranking object>,
-    "strategy_type": "<resolved value>",
-    "start_date": "<resolved value>",
-    "end_date": "<resolved value>",
-    "initial_cash": <resolved value>,
-    "taker_fee_rate": <resolved value>,
-    "maker_fee_rate": <resolved value>,
-    "rebalance_bars": <resolved value>,
-    "attribution": <resolved value>
-  }
-}
-```
-
-`submit_payload` contains exactly the fields and semantic values sent to `sb_submit_run`; it
-must not gain omitted Product defaults. Copy `contract_revision` exactly from the single
-`sb_get_contract` response used for this operation. For every effective-profile field, use
-the validated explicit submit value when present and the corresponding `product_defaults` value
-when omitted.
-
-When `factor_ids` is submitted, use exactly this effective weighting:
-
-```json
-{
-  "mode": "equal"
-}
-```
-
-When `factor_weights` is submitted, preserve every validated factor id and weight in exactly this
-effective weighting shape:
-
-```json
-{
-  "mode": "custom",
-  "factor_weights": [
-    {
-      "factor_id": "<exact factor id>",
-      "weight": <exact validated weight>
-    }
-  ]
-}
-```
-
-Canonicalize only a local hashing copy as follows; none of these operations may alter the payload
-sent to the MCP tool:
-
-- Recursively sort all JSON object keys lexicographically.
-- Sort `submit_payload.factor_ids` by the factor-id string in ascending lexical order.
-- Sort `submit_payload.factor_weights` by `item.factor_id` in ascending lexical order.
-- Sort `effective_profile.weighting.factor_weights` by `item.factor_id` in ascending lexical order.
-- Do not reorder unrelated arrays. Preserve strings and booleans exactly.
-- Reject non-finite numeric values before fingerprinting. Treat each finite numeric leaf as an exact
-  decimal value and encode it as a canonical plain-decimal JSON number: no leading plus sign; no
-  exponent notation; no redundant leading zeros; no redundant trailing fractional zeros. Normalize
-  an integral value such as `5.0` to `5`, and normalize negative zero to `0`.
-- Encode the canonical descriptor as compact UTF-8 JSON with no insignificant whitespace. Hash
-  those exact bytes with SHA-256 and use the first 16 lowercase hexadecimal characters as
-  `<fingerprint>`.
-
-The descriptor, effective profile, resolved Product defaults, and contract revision exist only for
-local fingerprinting. Never send them to `sb_submit_run`, never pass `contract_revision` as a
-tool argument, and never add `weighting`, a resolved default, or `contract_revision` to the actual
-request. Factor ids remain in the hashed descriptor but never appear in the visible directory name,
-a user-facing path, or a user-facing summary. Beyond the required contract revision and selector
-factor ids, never include credentials, OAuth material, URLs, source code, internal filesystem paths,
-run ids, or other internal identifiers in the fingerprint descriptor.
-
-The same final payload, contract revision, and effective profile must produce the same fingerprint
-across agents and hosts. A changed factor selection, custom weight, explicit option, resolved
-Product default, or contract revision must change it. Reordering `factor_ids`, reordering either
-factor-weights array, changing JSON object-key order, or representing an integral number as `5`
-instead of `5.0` must not change it. Explicitly supplying a value and omitting it may produce
-different fingerprints even when both resolve to the same effective behavior because the exact
-final submit payload is part of the descriptor. These local rules do not change any server request
-or remote behavior.
-
-Use this folder-name format:
+The only canonical completed local path is:
 
 ```text
-<strategy_name_slug>__<factor_slug_1>__<factor_slug_2>__<fingerprint>
+{user_home}/Quandora result/strategy/{strategy_slug}.zip
 ```
 
-Build `<strategy_name_slug>` from the final submitted `name`, whether user-supplied or generated,
-and truncate it to at most 48 characters. For a one-factor strategy, omit the `<factor_slug_2>`
-segment.
+Resolve `{user_home}` to the current user's absolute home directory before any file operation or
+user-facing link; never keep the placeholder or hard-code an account name.
 
-Bound the complete `<strategy_slug>` directory component to at most 180 ASCII characters. If
-additional truncation is necessary after composing it, remove trailing characters from the leading
-strategy segment first, then `<factor_slug_2>`, then `<factor_slug_1>`, trimming any newly exposed
-outer underscores and preserving at least one character in each displayed segment. Preserve the
-complete final `__<fingerprint>` suffix unchanged. Reuse an existing deterministic directory only
-when both the final payload and effective contract context are unchanged.
+Create `{user_home}/Quandora result/strategy/` if it does not exist. Never save a
+completed Strategy ZIP in the parent result directory, the current workspace, or the Factor
+directory.
 
-The slug is a local archive label only. Do not send the slug in an action request. Use it only in
-the local archive folder and the user-facing local paths.
-
-```text
-Quandora result/
-  strategy/
-    <strategy_slug>/
-      run_summary.json
-      artifacts/
-        <verified JSON/text files using their exact registry local names>
-        image/
-          <verified PNG files using their registry local archive names>
-      artifact_manifest.json
-```
-
-Save `run_summary.json` from the final main-run snapshot. Verified JSON/text ticket downloads use
-the `local_name` returned by the ticket response. For PNG, first verify that the returned
-`local_name` exactly matches the requested artifact name, then use the registry's local archive
-name. JSON/text files remain directly under `artifacts/`; every PNG final file and `.partial` file
-remains under `artifacts/image/`.
-
-After a completed archive retrieval pass, create `artifact_manifest.json` with the run id, main-run
-status, `archiveStatus: completed`, and exactly twenty-one entries, one for every registry name.
-Each entry contains only the artifact name, terminal/source state, relative local path when saved,
-content type, size, SHA-256, and a bounded safe failure class when needed. State that this archive
-pass completed, but do not claim that the archive is fully saved unless all required source states
-and verified local saves justify that claim. A saved PNG's relative local path must be
-`artifacts/image/<local archive name>`.
-
-After a partial archive pass, create the same twenty-one per-artifact entries with
-`archiveStatus: partial`, preserving every returned state and the local path only for verified ready
-downloads. Clearly mark the archive as partial and never claim that the full archive was fetched.
-For a pending/running bounded-wait exhaustion or any other non-`completed` terminal archive state,
-record only the archive-level state and observed `archiveStatus` without manufacturing per-artifact
-`not_available` entries. Never include a ticket, download URL, internal URL, storage reference, or
-credential.
-Keep run ids only in `run_summary.json` and `artifact_manifest.json` when traceability requires
-them; never use a run id in a directory name or user-facing summary.
-
-For each artifact attempted during a completed or partial archive pass, update its local file only
-after a verified ticket download. For every non-ready state, record that state exactly as returned.
-Do not create a placeholder body file, or delete or overwrite an existing final body file.
+The slug is a local presentation label only and must not be sent in an action request. For a
+non-terminal or archive-pending run, preserve the existing redacted run-summary behavior in the
+normal authoring workspace when local writes are available. For a completed run, the FM-owned ZIP
+is authoritative and no second canonical `run_summary.json` is written beside it. Never place a
+ticket, URL, internal host, storage reference, credential, or bundle bytes in local metadata or
+user-facing output.
 
 ## Final Response
 
 State the submitted strategy name and whether it was user-supplied or factor-aware generated. State
-the main-run status, archive status, and safe diagnostics. State all twenty-one archive
-artifact states after a completed or partial archive pass; for a partial pass, clearly state that the
-archive is partial and that the full archive was not fetched. Otherwise clearly state that the archive
-is incomplete and that no full artifact retrieval was claimed. For artifacts without a local body
-file, state `not created` and its returned state. Do not print large artifact bodies.
+the main-run status, archive status, safe diagnostics, and the one verified Result Bundle ZIP path
+when saved. If it was not saved, say so accurately; do not print large artifact bodies or describe a
+manually assembled archive.
 
-Never show run ids, download URLs, credentials, secret material, or internal service metadata in a
-user-facing summary.
+For a selected partial snapshot, state that it is partial and report the exact omissions and pending
+reasons from the runtime manifest without claiming completeness.
+
+Never show run ids, credentials, secret material, or internal service metadata in a user-facing
+summary. Do not repeat a consumed or expired download URL in the final summary; this does not
+prohibit its safe transient appearance in the ticket response or download-tool invocation.
 
 For a main run that remains non-terminal after the twelfth follow-up, clearly state that the
 server-side run remains in progress and can be resumed later. State that terminal archive
-observation and artifact retrieval were not started, and do not state that results or artifacts are
+observation and bundle retrieval were not started, and do not state that results or bundles are
 available.
 
-At the end of every completed, failed, or interrupted run, show the result folder, artifact folder,
-image folder, `run_summary.json`, and `artifact_manifest.json`. If a specific file or folder was not
-created, say `not created` for that line. After a completed or partial archive pass, link each saved
-PNG when practical; otherwise the absolute image-folder link below is the required PNG handoff.
+At the end of every completed, failed, or interrupted run, show the `{user_home}/Quandora result/strategy/` folder and
+the exact `{user_home}/Quandora result/strategy/{strategy_slug}.zip` path when the ZIP was saved. For a non-terminal or
+archive-pending run, mention `run_summary.json` only when the normal authoring workflow saved that
+pending summary. For a completed run, the FM-owned ZIP is the only canonical completed-result
+archive; never create a second completed-result `run_summary.json` beside it. If a specific file was
+not created, say `not created`. Never show run IDs, snapshot revisions, tickets, download URLs,
+credentials, or bundle base64.
 
-For Desktop or GUI hosts, use Markdown links with absolute local paths and angle-bracket link
-targets so paths with spaces work:
+For Desktop or GUI hosts, replace `{user_home}` with the resolved absolute home path and use
+Markdown links with angle-bracket link targets so paths with spaces work:
 
 ```text
-Result folder: [Open result folder](</absolute/path/to/Quandora result/strategy/<strategy_slug>/>)
-Artifact folder: [Open artifact folder](</absolute/path/to/Quandora result/strategy/<strategy_slug>/artifacts/>)
-Image folder: [Open image folder](</absolute/path/to/Quandora result/strategy/<strategy_slug>/artifacts/image/>)
-Run summary: [run_summary.json](</absolute/path/to/Quandora result/strategy/<strategy_slug>/run_summary.json>)
-Artifact manifest: [artifact_manifest.json](</absolute/path/to/Quandora result/strategy/<strategy_slug>/artifact_manifest.json>)
+Result folder: [Open result folder](<{user_home}/Quandora result/strategy/>)
+Result Bundle ZIP: [verified ZIP](<{user_home}/Quandora result/strategy/{strategy_slug}.zip>)
 ```
 
-For CLI or TUI hosts, use the same absolute paths as plain text, not Markdown links:
+For CLI or TUI hosts, replace `{user_home}` with the resolved absolute home path and use the same
+absolute paths as plain text, not Markdown links:
 
 ```text
-Result folder: /absolute/path/to/Quandora result/strategy/<strategy_slug>/
-Artifact folder: /absolute/path/to/Quandora result/strategy/<strategy_slug>/artifacts/
-Image folder: /absolute/path/to/Quandora result/strategy/<strategy_slug>/artifacts/image/
-Run summary: /absolute/path/to/Quandora result/strategy/<strategy_slug>/run_summary.json
-Artifact manifest: /absolute/path/to/Quandora result/strategy/<strategy_slug>/artifact_manifest.json
+Result folder: {user_home}/Quandora\ result/strategy/
+Result Bundle ZIP: {user_home}/Quandora\ result/strategy/{strategy_slug}.zip
 ```
 
 If the host cannot write files, state:
 
 ```text
 Result folder: unavailable in this host
-Artifact folder: unavailable in this host
-Image folder: unavailable in this host
+Result Bundle ZIP: unavailable in this host
+Run summary: unavailable in this host
 ```
