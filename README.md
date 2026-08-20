@@ -20,26 +20,16 @@
 ### How It Works
 
 ```
-        +----------------------+      +----------------------+
-        | factor mining        |----->| factor analysis      |
-        +----------------------+      +----------------------+
-                  ^                              |
-                  |                              v
-                  |                    +----------------------+
-                  |                    | strategy building    |
-                  |                    +----------------------+
-                  |                              |
-                  |                              v
-                  |                    +----------------------+
-                  +--------------------| strategy analysis    |
-                    user-approved      +----------------------+
-                    experiment                   |
-                                                 v
-                                       +----------------------+
-                                       | simulated Paper      |
-                                       | Trading              |
-                                       +----------------------+
+Factor Mining -> Factor Analysis -> Strategy Building -> Strategy Analysis -> simulated Paper Trading
+      ^                |                    ^                    |
+      +----------------+                    +--------------------+
+       user-approved                         user-approved
+       factor experiment                     strategy experiment
 ```
+
+Analysis remains read-only. A factor experiment returns to Factor Mining, a composition or
+configuration experiment returns to Strategy Building, and Paper Trading starts only after a
+separate explicit user confirmation.
 
 <br>
 

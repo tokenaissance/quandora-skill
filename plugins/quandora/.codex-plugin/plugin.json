@@ -40,7 +40,7 @@
       "Use Quandora Strategy Analysis to diagnose a completed strategy result.",
       "Use Quandora Paper Trading to select an eligible source and start a simulated run after confirmation."
     ],
-    "brandColor": "#0F766E",
+    "brandColor": "#F28C00",
     "composerIcon": "./assets/quandora.png",
     "logo": "./assets/quandora.png"
   }
