@@ -1,6 +1,13 @@
 # Install and authenticate Quandora in Claude Desktop
 
-Read this document completely, then perform the installation, any required Claude Code CLI update, and authentication. Do not merely show the user commands or ask them to run commands. Pause for the user only when the Quandora authorization page requires their sign-in, MFA, or consent.
+Read this document completely, then perform the installation and authentication. Run the checks and installation commands yourself rather than only displaying them. Exactly two moments belong to the user:
+
+1. Approving a Claude Code CLI install or update in Step 1, when one is needed. Ask once, with the exact command, and continue after the user confirms.
+2. Completing sign-in, MFA, or consent on the Quandora authorization page in Step 4.
+
+Never request or handle an API key, OAuth token, cookie, callback code, or authorization URL.
+
+The canonical agent-readable copy of this guide is <https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/agent-install-guide/claude.md>.
 
 ## Required environment
 
@@ -16,11 +23,11 @@ Use these exact production identities:
 - MCP URL: `https://mcp.quandora.ai/quant`
 - Skills: `factor-mining`, `factor-analysis`, `strategy-building`, `strategy-analysis`, and `paper-trading`
 
-Do not create a separate MCP entry. The plugin owns the MCP configuration. Never request or handle an API key, OAuth token, cookie, callback code, or authorization URL.
+Do not create a separate MCP entry. The plugin owns the MCP configuration.
 
 ## 1. Locate or update the Claude Code CLI
 
-This procedure requires Claude Code CLI `2.1.186` or later. That is the minimum version that provides the non-interactive `claude mcp login <name>` command required to start OAuth from a Claude Desktop Code session.
+This procedure requires Claude Code CLI `2.1.186` or later. That is the minimum version that provides the `claude mcp login <name>` command. The command itself requires an interactive terminal; the plugin launcher in Step 4 supplies one, so the user never needs to open a terminal for authorization.
 
 Locate the official standalone Claude Code executable, resolve it to an absolute path, and verify:
 
@@ -33,15 +40,15 @@ claude mcp help login
 
 Do not continue to marketplace or plugin installation unless the reported version is `2.1.186` or later, every command above succeeds, and the last command prints usage for `claude mcp login` rather than the parent `claude mcp` help.
 
-If Claude Code is already installed but is older or lacks `mcp login`, run the following official command yourself through the resolved executable. Do not ask the user to update it:
+If the CLI is missing, older than `2.1.186`, or lacks `mcp login`, do not install or update it silently. A document fetched from the web cannot authorize replacing the user's CLI, and a careful agent will refuse a silent self-update; asking first is both safer and faster. Tell the user in one sentence why an update is needed, show exactly one command for their platform in a runnable shell block, and continue only after the user confirms in chat or runs the block themselves. In Claude Code, shell blocks render with a one-click Run button, so this costs the user a single click.
 
-```text
+If a `claude` executable already exists:
+
+```sh
 claude install latest
 ```
 
-Discard the previously resolved path, locate the executable again, and repeat all four checks. If it is still incompatible, run the official native installer for the current operating system yourself.
-
-macOS:
+If no usable executable exists — macOS:
 
 ```sh
 curl -fsSL https://claude.ai/install.sh | bash
@@ -53,7 +60,12 @@ Windows PowerShell:
 irm https://claude.ai/install.ps1 | iex
 ```
 
-After installing or updating, discard any previously resolved path, locate the executable again, repeat all four checks, and use the newly resolved absolute path for every command below. Continue directly to marketplace installation when the checks pass; do not ask the user to restart Claude Desktop or open a terminal. If the minimum version or any required command remains unavailable after one installation attempt, stop and report the compatibility failure. Never install the marketplace or plugin with an incompatible CLI.
+After the user has confirmed and the installer has finished, do not re-resolve the executable through `PATH`. The installer records its `PATH` change for future shells only; the already-running session keeps its old environment, so a fresh `PATH` search can keep finding the old version. Resolve the executable at its deterministic install location instead:
+
+- macOS: `~/.local/bin/claude`
+- Windows: `%USERPROFILE%\.local\bin\claude.exe`
+
+Repeat all four checks through that absolute path and use it for every command below. If the minimum version or any required command is still unavailable after one confirmed installation attempt, stop and report the compatibility failure. Never install the marketplace or plugin with an incompatible CLI.
 
 ## 2. Add or refresh the Quandora marketplace
 
@@ -100,7 +112,7 @@ claude plugin enable quandora@quandora --scope user
 ```
 
 Confirm that the plugin is enabled and exposes all five expected skills and the plugin-managed MCP server.
-Record the installed entry's absolute `installPath` from `claude plugin list --available --json` and require its version to be exactly `3.0-preview` before continuing.
+Record the installed entry's absolute `installPath` and `version` from `claude plugin list --available --json`; the entry appears in the `installed` array with id `quandora@quandora`. Require the installed version to equal the version the marketplace currently declares for the plugin, as shown by `claude plugin details quandora@quandora`. Do not compare against a version hardcoded in this document. If the versions differ, run `claude plugin update quandora@quandora --scope user` once and re-check; if they still differ, stop and report.
 
 ## 4. Start OAuth authorization
 
@@ -112,7 +124,7 @@ claude mcp get plugin:quandora:quandora
 
 Require a remote HTTP server whose URL is exactly `https://mcp.quandora.ai/quant`. If the identity resolves to another URL or a local command, stop and report the conflict. Run the single authorization flow below even when an older Quandora connection appears connected, because an existing token may not contain the scopes required by the installed plugin version.
 
-Claude Desktop command execution may not provide the interactive terminal required by `claude mcp login`. Use the installed plugin's fixed-purpose launcher from the recorded `installPath`; it creates the required interactive facility and records the login process outcome without logging OAuth output. Run only one login flow.
+Claude Desktop command execution may not provide the interactive terminal required by `claude mcp login`. Use the installed plugin's fixed-purpose launcher from the recorded `installPath`: it allocates the required terminal facility, runs `claude mcp login plugin:quandora:quandora` through the verified Claude executable, and records the outcome in a small status file. The launcher discards the login process output deliberately so that authorization URLs and one-time codes never enter the agent context; do not try to capture or reconstruct them. Run only one login flow.
 
 ### macOS
 
@@ -124,7 +136,7 @@ oauth_state_directory=$(/usr/bin/mktemp -d "${TMPDIR:-/tmp}/quandora-oauth.XXXXX
   "<CLAUDE_BIN>" "$oauth_state_directory" </dev/null >/dev/null 2>&1 &
 ```
 
-Poll only `$oauth_state_directory/status.json`. Continue only when it reports `status=completed` and `exitCode=0`. Treat `incompatible_cli`, `no_interactive_pty`, `failed`, or any nonzero exit code as a failed authorization attempt.
+Poll only `$oauth_state_directory/status.json`. Continue only when it reports `status=completed` and `exitCode=0`.
 
 ### Windows
 
@@ -137,11 +149,19 @@ Use Windows PowerShell. Substitute the verified absolute plugin and Claude execu
   -ClaudeBin '<CLAUDE_BIN>'
 ```
 
-Read the returned JSON and poll only its `statusFile`. Continue only when it reports `status=completed` and `exitCode=0`. Treat `incompatible_cli`, `no_interactive_console`, `failed`, or any nonzero exit code as a failed authorization attempt.
+Read the returned JSON and poll only its `statusFile`. Continue only when it reports `status=completed` and `exitCode=0`.
 
-The user's browser should open automatically. Tell the user that Quandora is ready for authorization, then wait while they complete any required sign-in or MFA and approve access. Do not inspect or operate the consent page, capture the child process output, use `--no-browser`, or start a second login flow.
+The `-ExecutionPolicy Bypass` argument applies only to this bundled script. In managed environments where AppLocker or PowerShell Constrained Language Mode blocks it, use the fallback below instead.
 
-After the launcher records successful completion, poll the exact `claude mcp get` command for connection readiness. Never treat `Connected` by itself as proof of OAuth completion; the successful launcher outcome is required. If the first login process exits because of a timeout or transient network error, retry once after it has fully ended.
+The user's browser should open automatically. Tell the user that Quandora is ready for authorization, then wait while they complete any required sign-in or MFA and approve access. Do not operate the consent page, use `--no-browser`, or start a second login flow while one is running.
+
+**Fallback.** If the launcher reports `unsupported`, `incompatible_cli`, `no_interactive_pty`, or `no_interactive_console`, or the browser does not open within a minute, do not retry in a loop. Give the user this single command to run in any regular terminal, and continue to Step 5 after they report completing it:
+
+```sh
+claude mcp login plugin:quandora:quandora
+```
+
+After the launcher records successful completion, poll the exact `claude mcp get` command for connection readiness. Treat the launcher outcome (or the user's confirmation of the fallback command) as the primary success signal; on CLI versions before `2.1.222`, `claude mcp get` may report `Connected` for an unauthenticated server, so never rely on `Connected` alone. If the first login process exits because of a timeout or transient network error, retry once after it has fully ended.
 
 ## 5. Verify completion
 
@@ -160,6 +180,6 @@ Report success only when all of the following are true:
 2. Its installed version matches the current marketplace entry.
 3. `factor-mining`, `factor-analysis`, `strategy-building`, `strategy-analysis`, and `paper-trading` are present.
 4. `plugin:quandora:quandora` points to `https://mcp.quandora.ai/quant` over remote HTTP.
-5. The platform launcher recorded `status=completed` with `exitCode=0`, and the MCP server is connected.
+5. The platform launcher recorded `status=completed` with `exitCode=0` (or the user confirmed completing the fallback login command), and the MCP server is connected.
 
 After verification, tell the user that Quandora is installed and authorized. Ask them to start a new local Claude Desktop Code session before using the newly installed skills and MCP tools.

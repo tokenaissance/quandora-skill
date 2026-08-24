@@ -1,0 +1,13 @@
+# Quandora
+
+> Quandora is a quantitative research platform. This repository is its agent plugin marketplace: plugins for Claude Code / Claude Desktop (and other agents) that provide Factor Mining, Factor Analysis, Strategy Building, Strategy Analysis, and Paper Trading skills over an OAuth-protected MCP server at https://mcp.quandora.ai/quant.
+
+## Agent install guides
+
+- [Claude install guide](https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/agent-install-guide/claude.md): Install and authenticate the Quandora plugin from a Claude Desktop Code session
+- [ChatGPT install guide](https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/agent-install-guide/chatgpt.md): Install and authenticate Quandora for ChatGPT
+
+## Plugin
+
+- [Marketplace repository](https://github.com/varsity-tech-product/quandora-plugins): Source of the `quandora` marketplace and the `quandora@quandora` plugin
+- [Plugin README](https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/plugins/quandora/README.md): Plugin overview and skill descriptions
