@@ -87,11 +87,15 @@ If the exact user-scoped plugin is absent, run:
 codebuddy plugin install quandora@quandora --scope user
 ```
 
-If it is present, run:
+If it is present and its installed package already contains both WorkBuddy China helpers listed below, keep that verified package and continue to enable it. Do not replace an in-use cache merely to repeat installation.
+
+If it is present but either helper is missing, run one update attempt:
 
 ```text
 codebuddy plugin update quandora@quandora --scope user
 ```
+
+Re-read the plugin list and installed package. If an update reports that the same-version cache is in use, or either helper remains missing, stop and explain that the installed preview package cannot be replaced safely from the running App. Do not quit WorkBuddy, kill its daemon, edit its cache, or ask the user to use the plugin UI.
 
 Enable it:
 
