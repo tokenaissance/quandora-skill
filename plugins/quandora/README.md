@@ -46,15 +46,16 @@ skills/
 
 ## CodeBuddy and the WorkBuddy China edition
 
-The CodeBuddy-compatible plugin manifest registers all five skills and the plugin-managed `quandora` remote HTTP MCP server. The macOS WorkBuddy China flow is documented in `agent-install-guide/workbuddy-cn.md` and ships two fixed-purpose helpers:
+The CodeBuddy-compatible plugin manifest registers all five skills and the plugin-managed `quandora` remote HTTP MCP server. The macOS WorkBuddy China flow is documented in `agent-install-guide/workbuddy-cn.md` and ships a deterministic installer plus two fixed-purpose OAuth helpers:
 
 ```text
 scripts/
+  workbuddy-cn-install-macos.js
   workbuddy-cn-auth-macos.sh
   workbuddy-cn-oauth-macos.js
 ```
 
-The shell entrypoint invokes only WorkBuddy's bundled Electron runtime. The JavaScript helper verifies this installed plugin and the production endpoint, uses WorkBuddy's own OAuth implementation and account-scoped encrypted store, opens the browser for user consent, and makes a protected `fm_status` verification call. It does not scan other connectors, expose OAuth material, install a runtime, or create a second MCP entry.
+The installer uses WorkBuddy's bundled runtime and plugin manager with closed stdin, bounded child processes, exact production identities, and no shell interpolation. It installs or verifies the managed package before invoking the shell entrypoint. The OAuth JavaScript verifies this installed plugin and the production endpoint, uses WorkBuddy's own OAuth implementation and account-scoped encrypted store, opens the browser for user consent, and makes a protected `fm_status` verification call. These helpers do not scan other connectors, expose OAuth material, install a runtime, or create a second MCP entry.
 
 ## Claude Desktop Code OAuth Launchers
 
