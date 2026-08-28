@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import stat
@@ -12,6 +13,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "quandora"
 GUIDE = ROOT / "agent-install-guide" / "workbuddy-cn.md"
+INSTALLER = PLUGIN / "scripts" / "workbuddy-cn-install-macos.js"
 WRAPPER = PLUGIN / "scripts" / "workbuddy-cn-auth-macos.sh"
 OAUTH = PLUGIN / "scripts" / "workbuddy-cn-oauth-macos.js"
 
@@ -53,6 +55,7 @@ def main() -> None:
         require(payload["name"] == "quandora", f"wrong plugin name: {path}")
         versions.append(payload["version"])
     require(len(versions) == 9 and len(set(versions)) == 1, "package versions differ")
+    require(versions[0] == "3.0-preview", "WorkBuddy fix must not change package version")
 
     mcp = read_json(PLUGIN / "mcp.json")["mcpServers"]
     require(
@@ -74,16 +77,54 @@ def main() -> None:
         require((PLUGIN / "skills" / skill / "SKILL.md").is_file(), f"missing {skill}")
 
     guide = GUIDE.read_text(encoding="utf-8")
+    installer = INSTALLER.read_text(encoding="utf-8")
     wrapper = WRAPPER.read_text(encoding="utf-8")
     oauth = OAUTH.read_text(encoding="utf-8")
-    require("quandora-staging" not in guide + wrapper + oauth, "staging identity leaked")
+    require(
+        "quandora-staging" not in guide + installer + wrapper + oauth,
+        "staging identity leaked",
+    )
     for expected in (
         "varsity-tech-product/quandora-plugins",
         "quandora@quandora",
         "https://mcp.quandora.ai/quant",
-        "scripts/workbuddy-cn-auth-macos.sh",
+        "plugins/quandora/scripts/workbuddy-cn-install-macos.js",
+        "Do not ask for another conversational confirmation.",
     ):
         require(expected in guide, f"guide is missing {expected}")
+    installer_sha256 = hashlib.sha256(INSTALLER.read_bytes()).hexdigest()
+    require(installer_sha256 in guide, "guide does not pin the installer SHA-256")
+    require("codebuddy plugin" not in guide, "guide still orchestrates bare plugin commands")
+
+    installer_requirements = (
+        'const MARKETPLACE_REPOSITORY = "varsity-tech-product/quandora-plugins";',
+        'const PLUGIN_ID = "quandora@quandora";',
+        'const PLUGIN_VERSION = "3.0-preview";',
+        'const MCP_URL = "https://mcp.quandora.ai/quant";',
+        'stdio: ["ignore", "pipe", "pipe"]',
+        "shell: false",
+        "const CLI_TIMEOUT_MS = 3 * 60 * 1000;",
+        'CODEBUDDY_CONFIG_DIR: configRoot',
+        '["plugin", "marketplace", "add", MARKETPLACE_REPOSITORY, "--name", MARKETPLACE_NAME]',
+        '["plugin", "install", PLUGIN_ID, "--scope", "user"]',
+        '["plugin", "enable", PLUGIN_ID, "--scope", "user"]',
+        'step: "browser_authorization_starting"',
+        'path.join(pluginRoot, "scripts", "workbuddy-cn-auth-macos.sh")',
+    )
+    for expected in installer_requirements:
+        require(expected in installer, f"installer is missing {expected}")
+    for forbidden in (
+        "--serve",
+        "--prewarm",
+        "execSync",
+        "spawnSync",
+        "shell: true",
+        "readdirSync",
+        "globSync",
+        ".credentials.json",
+        "purgeByServerName",
+    ):
+        require(forbidden not in installer, f"installer exceeds scope: {forbidden}")
 
     require(wrapper.startswith("#!/bin/sh\nset -eu\numask 077\n"), "unsafe shell prelude")
     require("ELECTRON_RUN_AS_NODE=1" in wrapper, "bundled Electron is not used")
@@ -128,6 +169,8 @@ def main() -> None:
 
     wrapper_mode = WRAPPER.stat().st_mode
     require(wrapper_mode & stat.S_IXUSR, "macOS wrapper is not executable")
+    installer_mode = INSTALLER.stat().st_mode
+    require(installer_mode & stat.S_IXUSR, "macOS installer is not executable")
     print(
         json.dumps(
             {
@@ -135,6 +178,7 @@ def main() -> None:
                 "packageVersion": versions[0],
                 "platform": "workbuddy-cn-macos",
                 "credentialReads": "quandora-slot-only",
+                "installerCliStdin": "closed",
             },
             separators=(",", ":"),
         )
