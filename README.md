@@ -159,7 +159,13 @@ CodeBuddy uses the plugin-managed remote HTTP MCP server and opens its native br
 
 #### WorkBuddy China edition
 
-The WorkBuddy China edition consumes the CodeBuddy-compatible marketplace and plugin manifests together with the plugin-managed `quandora` remote HTTP MCP declaration. Install or update the Quandora plugin through its plugin or custom-MCP interface, reconnect it, complete the host-native browser authorization flow, and start a new chat. Do not create a local MCP server or paste credentials.
+On macOS, give a local WorkBuddy China Agent this one-sentence prompt:
+
+```text
+Read https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/agent-install-guide/workbuddy-cn.md completely, then install and authenticate Quandora for me.
+```
+
+The guide uses the CodeBuddy-compatible marketplace and plugin manifests, then runs the package-owned, App-native OAuth helper from the verified plugin cache. The helper writes only Quandora's account-scoped encrypted OAuth slot and verifies the protected `fm_status` tool. Do not create a custom MCP server or paste credentials.
 
 #### Kimi Code CLI
 
