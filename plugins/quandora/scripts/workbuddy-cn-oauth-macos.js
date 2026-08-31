@@ -7,15 +7,6 @@ const http = require("node:http");
 const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 
-// WorkBuddy's bundled modules log startup diagnostics when required. Keep the
-// helper's output machine-readable and prevent OAuth runtime details from
-// entering the Agent transcript.
-console.debug = () => {};
-console.error = () => {};
-console.info = () => {};
-console.log = () => {};
-console.warn = () => {};
-
 const CONFIG_ID = "custom-mcp:quandora";
 const MCP_URL = "https://mcp.quandora.ai/quant";
 const AUTHORIZATION_SERVER = "https://mcp.quandora.ai";
@@ -26,8 +17,30 @@ const REQUEST_TIMEOUT_MS = 30 * 1000;
 class SafeError extends Error {}
 class AuthenticationRequiredError extends SafeError {}
 
+function suppressRuntimeConsole() {
+  // WorkBuddy's bundled modules log startup diagnostics when required. Keep
+  // stdout machine-readable and OAuth runtime details out of Agent transcripts.
+  console.debug = () => {};
+  console.error = () => {};
+  console.info = () => {};
+  console.log = () => {};
+  console.warn = () => {};
+}
+
 function fail(message) {
   throw new SafeError(message);
+}
+
+function emitProgress(step) {
+  process.stderr.write(`${JSON.stringify({ status: "progress", step })}\n`);
+}
+
+function boundedFetch(input, init = {}) {
+  const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+  const signal = init.signal
+    ? AbortSignal.any([init.signal, timeoutSignal])
+    : timeoutSignal;
+  return fetch(input, { ...init, signal });
 }
 
 function readJson(filePath, label) {
@@ -136,6 +149,7 @@ async function mcpRequest(token, sessionId, payload, allowEmpty = false) {
 }
 
 async function verifyProtectedTool(tokens) {
+  emitProgress("protected_probe_started");
   const accessToken = requireString(tokens?.access_token, "Quandora access token");
   let sessionId;
   try {
@@ -187,6 +201,7 @@ async function verifyProtectedTool(tokens) {
     if (!called.rpc?.result || called.rpc.result.isError === true) {
       fail("The protected Quandora fm_status verification call failed.");
     }
+    emitProgress("protected_probe_completed");
     return tools.length;
   } finally {
     if (sessionId) {
@@ -204,9 +219,11 @@ async function verifyProtectedTool(tokens) {
 }
 
 async function discoverOAuth(auth) {
+  emitProgress("oauth_discovery_started");
   const resourceMetadata = await auth.discoverOAuthProtectedResourceMetadata(
     new URL(MCP_URL),
     { protocolVersion: PROTOCOL_VERSION },
+    boundedFetch,
   );
   if (resourceMetadata.resource !== MCP_URL) {
     fail("Quandora OAuth resource metadata does not match the plugin endpoint.");
@@ -223,6 +240,7 @@ async function discoverOAuth(auth) {
   const authorizationMetadata =
     await auth.discoverAuthorizationServerMetadata(authorizationServerUrl, {
       protocolVersion: PROTOCOL_VERSION,
+      fetchFn: boundedFetch,
     });
   if (
     authorizationMetadata?.issuer !== AUTHORIZATION_SERVER ||
@@ -239,6 +257,7 @@ async function discoverOAuth(auth) {
   if (!Array.isArray(scopes) || scopes.length === 0) {
     fail("Quandora OAuth scopes are unavailable.");
   }
+  emitProgress("oauth_discovery_completed");
   return {
     authorizationMetadata,
     authorizationServerUrl,
@@ -250,6 +269,7 @@ async function discoverOAuth(auth) {
 function createCallbackServer() {
   let resolveCallback;
   let rejectCallback;
+  let callbackResponse;
   let timer;
   const callback = new Promise((resolve, reject) => {
     resolveCallback = resolve;
@@ -259,21 +279,45 @@ function createCallbackServer() {
   const server = http.createServer((request, response) => {
     try {
       const requestUrl = new URL(request.url || "/", "http://127.0.0.1");
-      if (request.method !== "GET" || requestUrl.pathname !== "/oauth/callback") {
+      const address = server.address();
+      const port = address && typeof address !== "string" ? address.port : 0;
+      const host = request.headers.host;
+      const origin = request.headers.origin;
+      const allowedHost = host === `127.0.0.1:${port}` || host === `localhost:${port}`;
+      let allowedOrigin = origin === undefined;
+      if (origin !== undefined) {
+        try {
+          const parsedOrigin = new URL(origin);
+          allowedOrigin =
+            parsedOrigin.protocol === "http:" &&
+            ["127.0.0.1", "localhost", "::1"].includes(parsedOrigin.hostname) &&
+            Number(parsedOrigin.port) === port;
+        } catch {
+          allowedOrigin = false;
+        }
+      }
+      if (request.method !== "GET" || !allowedHost || !allowedOrigin) {
+        response.writeHead(403, { "Content-Type": "text/plain; charset=utf-8" });
+        response.end("Forbidden.\n");
+        return;
+      }
+      if (requestUrl.pathname !== "/oauth/callback") {
         response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
         response.end("Not found.\n");
         return;
       }
-      response.writeHead(200, {
-        "Content-Type": "text/html; charset=utf-8",
-        "Cache-Control": "no-store",
-      });
-      response.end(
-        "<!doctype html><meta charset=utf-8><title>Quandora authorized</title>" +
-          "<p>Quandora authorization was received. You can return to WorkBuddy.</p>",
-      );
+      if (callbackResponse) {
+        response.writeHead(409, { "Content-Type": "text/plain; charset=utf-8" });
+        response.end("Authorization callback already received.\n");
+        return;
+      }
+      callbackResponse = response;
       resolveCallback(requestUrl);
     } catch (error) {
+      if (!response.headersSent) {
+        response.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" });
+      }
+      response.end("Invalid authorization callback.\n");
       rejectCallback(error);
     }
   });
@@ -296,14 +340,40 @@ function createCallbackServer() {
         fail("The local OAuth callback listener did not start.");
       }
       timer = setTimeout(() => {
+        if (callbackResponse && !callbackResponse.writableEnded) {
+          callbackResponse.shouldKeepAlive = false;
+          callbackResponse.writeHead(408, {
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "no-store",
+            Connection: "close",
+          });
+          callbackResponse.end("Quandora authorization timed out. Return to WorkBuddy.\n");
+        }
         rejectCallback(new Error("Quandora authorization timed out."));
         server.close();
       }, CALLBACK_TIMEOUT_MS);
       return new URL(`http://127.0.0.1:${address.port}/oauth/callback`);
     },
+    respond(success) {
+      if (!callbackResponse || callbackResponse.writableEnded) return;
+      callbackResponse.shouldKeepAlive = false;
+      callbackResponse.writeHead(success ? 200 : 400, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+        Connection: "close",
+      });
+      callbackResponse.end(
+        success
+          ? "<!doctype html><meta charset=utf-8><title>Quandora authorized</title>" +
+              "<p>Quandora authorization completed. You can return to WorkBuddy.</p>"
+          : "<!doctype html><meta charset=utf-8><title>Quandora authorization failed</title>" +
+              "<p>Quandora could not complete authorization. Return to WorkBuddy.</p>",
+      );
+    },
     close() {
       if (timer) clearTimeout(timer);
       server.close();
+      server.closeAllConnections?.();
     },
   };
 }
@@ -311,6 +381,8 @@ function createCallbackServer() {
 async function authenticate(auth, store, oauth) {
   const listener = createCallbackServer();
   const redirectUrl = await listener.listen();
+  emitProgress("callback_listener_ready");
+  let callbackReceived = false;
   try {
     const clientMetadata = {
       client_name: "Quandora for WorkBuddy",
@@ -325,6 +397,7 @@ async function authenticate(auth, store, oauth) {
         metadata: oauth.authorizationMetadata,
         clientMetadata,
         scope: oauth.scope,
+        fetchFn: boundedFetch,
       },
     );
     const state = crypto.randomBytes(32).toString("base64url");
@@ -344,8 +417,11 @@ async function authenticate(auth, store, oauth) {
       stdio: "ignore",
     });
     if (opened.status !== 0) fail("WorkBuddy could not open the authorization page.");
+    emitProgress("browser_opened");
 
     const callbackUrl = await listener.callback;
+    callbackReceived = true;
+    emitProgress("callback_received");
     if (callbackUrl.searchParams.get("state") !== state) {
       fail("The OAuth callback state did not match.");
     }
@@ -356,6 +432,7 @@ async function authenticate(auth, store, oauth) {
       "OAuth authorization code",
     );
 
+    emitProgress("token_exchange_started");
     const tokens = await auth.exchangeAuthorization(
       oauth.authorizationServerUrl,
       {
@@ -365,15 +442,22 @@ async function authenticate(auth, store, oauth) {
         codeVerifier: authorization.codeVerifier,
         redirectUri: redirectUrl,
         resource: oauth.resource,
+        fetchFn: boundedFetch,
       },
     );
+    emitProgress("token_exchange_completed");
     if (!store.saveClientInfo(CONFIG_ID, MCP_URL, clientInformation)) {
       fail("WorkBuddy refused to save the Quandora OAuth client.");
     }
     if (!store.saveTokens(CONFIG_ID, MCP_URL, tokens)) {
       fail("WorkBuddy refused to save Quandora authorization.");
     }
+    emitProgress("authorization_saved");
+    listener.respond(true);
     return tokens;
+  } catch (error) {
+    if (callbackReceived) listener.respond(false);
+    throw error;
   } finally {
     listener.close();
   }
@@ -389,6 +473,7 @@ async function refreshStoredTokens(auth, store, oauth, tokens) {
       clientInformation,
       refreshToken: tokens.refresh_token,
       resource: oauth.resource,
+      fetchFn: boundedFetch,
     });
     if (!store.saveTokens(CONFIG_ID, MCP_URL, refreshed)) return null;
     return refreshed;
@@ -441,6 +526,7 @@ async function main() {
   ) {
     fail("This WorkBuddy build does not expose the required native OAuth runtime.");
   }
+  emitProgress("oauth_runtime_ready");
 
   const store = new ConnectorOAuthStore(resolveActiveUserId(configRoot));
   const forceAuthorization =
@@ -479,6 +565,7 @@ async function main() {
   }
 
   notifyWorkBuddy(configRoot);
+  emitProgress("workbuddy_notified");
   process.stdout.write(
     `${JSON.stringify({
       status: "completed",
@@ -490,15 +577,20 @@ async function main() {
   );
 }
 
-main().catch((error) => {
-  process.stderr.write(
-    `${JSON.stringify({
-      status: "failed",
-      message:
-        error instanceof SafeError
-          ? error.message
-          : "Quandora authorization or protected verification failed.",
-    })}\n`,
-  );
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  suppressRuntimeConsole();
+  main().catch((error) => {
+    process.stderr.write(
+      `${JSON.stringify({
+        status: "failed",
+        message:
+          error instanceof SafeError
+            ? error.message
+            : "Quandora authorization or protected verification failed.",
+      })}\n`,
+    );
+    process.exitCode = 1;
+  });
+}
+
+module.exports = { createCallbackServer };

@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 "use strict";
 
-const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
@@ -17,9 +16,21 @@ const PLUGIN_ID = "quandora@quandora";
 const PLUGIN_NAME = "quandora";
 const PLUGIN_VERSION = "3.0-preview";
 const MCP_URL = "https://mcp.quandora.ai/quant";
-const CLI_TIMEOUT_MS = 3 * 60 * 1000;
+const CLI_TIMEOUT_MS = 2 * 60 * 1000;
 const OAUTH_TIMEOUT_MS = 7 * 60 * 1000;
+const INSTALL_TIMEOUT_MS = 9 * 60 * 1000 + 30 * 1000;
 const OUTPUT_LIMIT_BYTES = 1024 * 1024;
+const AGENT_ROUTING_ENV_KEYS = [
+  "CODEBUDDY_SESSION_ID",
+  "CODEBUDDY_TOOL_CALL_ID",
+  "CODEBUDDY_CONVERSATION_REQUEST_ID",
+  "CODEBUDDY_MCP_CONFIG",
+  "CODEBUDDY_SERVICE_PROXY_URL",
+  "CODEBUDDY_PROJECT_DIR",
+  "CODEBUDDY_CURRENT_MODEL_ID",
+  "CLAUDE_SESSION_ID",
+  "CLAUDE_PROJECT_DIR",
+];
 const EXPECTED_SKILLS = [
   "factor-mining",
   "factor-analysis",
@@ -76,12 +87,45 @@ function compareVersions(left, right) {
   return 0;
 }
 
-function sha256(filePath) {
-  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
-}
-
 function emit(payload) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
+}
+
+function createCliEnv(configRoot) {
+  const env = { ...process.env };
+  for (const key of AGENT_ROUTING_ENV_KEYS) delete env[key];
+  env.CODEBUDDY_CONFIG_DIR = configRoot;
+  env.NO_COLOR = "1";
+  return env;
+}
+
+function pluginArgs(...args) {
+  return ["plugin", ...args, "--", "--print"];
+}
+
+function remainingTimeout(startedAt, maximumMs, label) {
+  const remaining = INSTALL_TIMEOUT_MS - (Date.now() - startedAt);
+  if (remaining <= 0) fail(`${label} could not start before the installer deadline.`);
+  return Math.min(maximumMs, remaining);
+}
+
+function cleanupTemporaryBootstrap() {
+  try {
+    const installerPath = fs.realpathSync(__filename);
+    const installerDirectory = path.dirname(installerPath);
+    const temporaryRoot = fs.realpathSync(process.env.TMPDIR || "/tmp");
+    if (
+      path.basename(installerPath) !== "workbuddy-cn-install-macos.js" ||
+      !/^quandora-workbuddy\.[A-Za-z0-9]{6,12}$/.test(path.basename(installerDirectory)) ||
+      !isInside(temporaryRoot, installerDirectory)
+    ) {
+      return;
+    }
+    fs.unlinkSync(installerPath);
+    fs.rmdirSync(installerDirectory);
+  } catch {
+    // Cleanup is best-effort and never changes the installation result.
+  }
 }
 
 async function runProcess(command, args, options) {
@@ -263,7 +307,7 @@ function hasRequiredPackageFiles(entry, configRoot) {
   }
 }
 
-function validateInstalledPlugin(entry, configRoot, runningInstallerHash, marketplaceVersion) {
+function validateInstalledPlugin(entry, configRoot, marketplaceVersion) {
   if (!entry || entry.enabled !== true) fail("Quandora is not enabled for the WorkBuddy user.");
   if (entry.version !== marketplaceVersion || entry.version !== PLUGIN_VERSION) {
     fail("The installed Quandora version does not match the marketplace.");
@@ -297,11 +341,6 @@ function validateInstalledPlugin(entry, configRoot, runningInstallerHash, market
   ) {
     fail("The installed Quandora MCP declaration is invalid.");
   }
-
-  const installedInstaller = path.join(pluginRoot, "scripts", "workbuddy-cn-install-macos.js");
-  if (fs.existsSync(installedInstaller) && sha256(installedInstaller) !== runningInstallerHash) {
-    fail("The installed Quandora installer does not match the reviewed bootstrap file.");
-  }
   return pluginRoot;
 }
 
@@ -327,6 +366,7 @@ function parseOAuthResult(stdout) {
 }
 
 async function main() {
+  const startedAt = Date.now();
   if (process.platform !== "darwin") fail("This installer supports macOS only.");
   const [appRootArgument, configRootArgument] = process.argv.slice(2);
   const appRoot = realpath(appRootArgument || APP_ROOT, "WorkBuddy application");
@@ -356,7 +396,7 @@ async function main() {
     path.join(appRoot, "Contents", "Resources", "app.asar.unpacked", "cli", "bin", "codebuddy"),
     "WorkBuddy bundled CLI",
   );
-  const cliEnv = { ...process.env, CODEBUDDY_CONFIG_DIR: configRoot, NO_COLOR: "1" };
+  const cliEnv = createCliEnv(configRoot);
   const cliVersion = (
     await requireSuccess(cli, ["--version"], {
       label: "WorkBuddy CLI version check",
@@ -374,16 +414,20 @@ async function main() {
   const existingMarketplace = knownMarketplaces[MARKETPLACE_NAME];
   if (existingMarketplace) {
     validateMarketplace(existingMarketplace, configRoot);
-    await requireSuccess(cli, ["plugin", "marketplace", "update", MARKETPLACE_NAME], {
+    await requireSuccess(cli, pluginArgs("marketplace", "update", MARKETPLACE_NAME), {
       label: "Quandora marketplace refresh",
-      timeoutMs: CLI_TIMEOUT_MS,
+      timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "Quandora marketplace refresh"),
       env: cliEnv,
     });
   } else {
     await requireSuccess(
       cli,
-      ["plugin", "marketplace", "add", MARKETPLACE_REPOSITORY, "--name", MARKETPLACE_NAME],
-      { label: "Quandora marketplace installation", timeoutMs: CLI_TIMEOUT_MS, env: cliEnv },
+      pluginArgs("marketplace", "add", MARKETPLACE_REPOSITORY, "--name", MARKETPLACE_NAME),
+      {
+        label: "Quandora marketplace installation",
+        timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "Quandora marketplace installation"),
+        env: cliEnv,
+      },
     );
   }
   knownMarketplaces = readJson(knownMarketplacesPath, "WorkBuddy marketplace registry");
@@ -394,23 +438,23 @@ async function main() {
   emit({ status: "progress", step: "marketplace_ready" });
 
   const listPlugins = async () => parsePluginList(
-    await requireSuccess(cli, ["plugin", "list", "--json"], {
+    await requireSuccess(cli, pluginArgs("list", "--json"), {
       label: "WorkBuddy plugin inventory",
-      timeoutMs: CLI_TIMEOUT_MS,
+      timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "WorkBuddy plugin inventory"),
       env: cliEnv,
     }),
   );
   let plugin = selectUserPlugin(await listPlugins());
   if (!plugin) {
-    await requireSuccess(cli, ["plugin", "install", PLUGIN_ID, "--scope", "user"], {
+    await requireSuccess(cli, pluginArgs("install", PLUGIN_ID, "--scope", "user"), {
       label: "Quandora plugin installation",
-      timeoutMs: CLI_TIMEOUT_MS,
+      timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "Quandora plugin installation"),
       env: cliEnv,
     });
   } else if (!hasRequiredPackageFiles(plugin, configRoot)) {
-    await requireSuccess(cli, ["plugin", "update", PLUGIN_ID, "--scope", "user"], {
+    await requireSuccess(cli, pluginArgs("update", PLUGIN_ID, "--scope", "user"), {
       label: "Quandora plugin update",
-      timeoutMs: CLI_TIMEOUT_MS,
+      timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "Quandora plugin update"),
       env: cliEnv,
     });
   }
@@ -421,21 +465,15 @@ async function main() {
     fail("The installed preview package cannot be replaced safely while WorkBuddy is using it.");
   }
   if (plugin.enabled !== true) {
-    await requireSuccess(cli, ["plugin", "enable", PLUGIN_ID, "--scope", "user"], {
+    await requireSuccess(cli, pluginArgs("enable", PLUGIN_ID, "--scope", "user"), {
       label: "Quandora plugin enablement",
-      timeoutMs: CLI_TIMEOUT_MS,
+      timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "Quandora plugin enablement"),
       env: cliEnv,
     });
     plugin = selectUserPlugin(await listPlugins());
   }
 
-  const runningInstallerHash = sha256(fs.realpathSync(__filename));
-  const pluginRoot = validateInstalledPlugin(
-    plugin,
-    configRoot,
-    runningInstallerHash,
-    marketplaceVersion,
-  );
+  const pluginRoot = validateInstalledPlugin(plugin, configRoot, marketplaceVersion);
   emit({ status: "progress", step: "plugin_ready" });
   emit({ status: "progress", step: "browser_authorization_starting" });
 
@@ -446,7 +484,11 @@ async function main() {
       appRoot,
       configRoot,
     ],
-    { label: "Quandora authorization", timeoutMs: OAUTH_TIMEOUT_MS, env: process.env },
+    {
+      label: "Quandora authorization",
+      timeoutMs: remainingTimeout(startedAt, OAUTH_TIMEOUT_MS, "Quandora authorization"),
+      env: process.env,
+    },
   );
   if (oauth.code !== 0) fail("Quandora authorization failed.");
   const result = parseOAuthResult(oauth.stdout);
@@ -466,4 +508,4 @@ main().catch((error) => {
   const message = error instanceof SafeError ? error.message : "The WorkBuddy China installation failed safely.";
   process.stderr.write(`${JSON.stringify({ status: "failed", message })}\n`);
   process.exitCode = 69;
-});
+}).finally(cleanupTemporaryBootstrap);
