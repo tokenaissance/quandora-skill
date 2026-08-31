@@ -12,10 +12,14 @@ const MARKETPLACE_NAME = "quandora";
 const PLUGIN_ID = "quandora@quandora";
 const PLUGIN_NAME = "quandora";
 const MCP_URL = "https://mcp.quandora.ai/quant";
+const CLI_HEALTH_TIMEOUT_MS = 45 * 1000;
 const CLI_TIMEOUT_MS = 2 * 60 * 1000;
 const OAUTH_TIMEOUT_MS = 7 * 60 * 1000;
 const INSTALL_TIMEOUT_MS = 9 * 60 * 1000 + 30 * 1000;
 const OUTPUT_LIMIT_BYTES = 1024 * 1024;
+const DEFAULT_REMEDIATION = "Stop without retrying and report this safe failure.";
+const CLI_REMEDIATION =
+  "Close this failed task, restart WorkBuddy, and paste the same installation prompt once in a new local Agent task. If it repeats, update WorkBuddy from Personal Center first.";
 const AGENT_ROUTING_ENV_KEYS = [
   "CODEBUDDY_SESSION_ID",
   "CODEBUDDY_TOOL_CALL_ID",
@@ -26,6 +30,8 @@ const AGENT_ROUTING_ENV_KEYS = [
   "CODEBUDDY_CURRENT_MODEL_ID",
   "CLAUDE_SESSION_ID",
   "CLAUDE_PROJECT_DIR",
+  "SERVER__HOST",
+  "SERVER__PORT",
 ];
 const EXPECTED_SKILLS = [
   "factor-mining",
@@ -49,10 +55,16 @@ const OAUTH_PROGRESS_STEPS = new Set([
   "workbuddy_notified",
 ]);
 
-class SafeError extends Error {}
+class SafeError extends Error {
+  constructor(message, code = "installation_failed", remediation = DEFAULT_REMEDIATION) {
+    super(message);
+    this.code = code;
+    this.remediation = remediation;
+  }
+}
 
-function fail(message) {
-  throw new SafeError(message);
+function fail(message, code, remediation) {
+  throw new SafeError(message, code, remediation);
 }
 
 function requireString(value, label) {
@@ -138,7 +150,14 @@ function cleanupTemporaryBootstrap() {
 }
 
 async function runProcess(command, args, options) {
-  const { label, timeoutMs, env = process.env, onStderrLine } = options;
+  const {
+    label,
+    timeoutMs,
+    env = process.env,
+    onStderrLine,
+    failureCode = "process_failed",
+    remediation = DEFAULT_REMEDIATION,
+  } = options;
   return new Promise((resolve, reject) => {
     let settled = false;
     let timedOut = false;
@@ -196,16 +215,19 @@ async function runProcess(command, args, options) {
       }
     });
     child.on("error", () => {
-      finish(new SafeError(`${label} could not be started.`));
+      finish(new SafeError(`${label} could not be started.`, failureCode, remediation));
     });
     child.on("close", (code, signal) => {
       if (onStderrLine && pendingStderr) onStderrLine(pendingStderr);
       if (timedOut) {
-        finish(new SafeError(`${label} timed out.`));
+        const outputState = stdout.length === 0 && stderr.length === 0
+          ? " without producing output"
+          : "";
+        finish(new SafeError(`${label} timed out${outputState}.`, failureCode, remediation));
         return;
       }
       if (oversized) {
-        finish(new SafeError(`${label} returned too much output.`));
+        finish(new SafeError(`${label} returned too much output.`, failureCode, remediation));
         return;
       }
       finish(null, {
@@ -255,8 +277,23 @@ function oauthFailureRequiresHostUpdate(stderr) {
 
 async function requireSuccess(command, args, options) {
   const result = await runProcess(command, args, options);
-  if (result.code !== 0) fail(`${options.label} failed.`);
+  if (result.code !== 0) {
+    fail(
+      `${options.label} failed.`,
+      options.exitFailureCode || "process_failed",
+      options.remediation || DEFAULT_REMEDIATION,
+    );
+  }
   return result.stdout;
+}
+
+async function requireCliSuccess(command, args, options) {
+  return requireSuccess(command, args, {
+    ...options,
+    failureCode: "cli_unhealthy",
+    exitFailureCode: options.exitFailureCode || "cli_operation_failed",
+    remediation: CLI_REMEDIATION,
+  });
 }
 
 async function plutilValue(infoPlist, key) {
@@ -455,15 +492,16 @@ async function main() {
     "WorkBuddy bundled CLI",
   );
   const cliEnv = createCliEnv(configRoot);
-  try {
-    await requireSuccess(cli, pluginArgs("--help"), {
-      label: "WorkBuddy headless plugin manager check",
-      timeoutMs: 30 * 1000,
+  await requireCliSuccess(
+    cli,
+    pluginArgs("marketplace", "list"),
+    {
+      label: "WorkBuddy marketplace health check",
+      timeoutMs: CLI_HEALTH_TIMEOUT_MS,
       env: cliEnv,
-    });
-  } catch {
-    fail("Update WorkBuddy from Personal Center, restart it, and retry in a new Agent task.");
-  }
+      exitFailureCode: "cli_unhealthy",
+    },
+  );
   emit({ status: "progress", step: "host_verified" });
 
   const knownMarketplacesPath = path.join(configRoot, "plugins", "known_marketplaces.json");
@@ -471,13 +509,13 @@ async function main() {
   const existingMarketplace = knownMarketplaces[MARKETPLACE_NAME];
   if (existingMarketplace) {
     validateMarketplace(existingMarketplace, configRoot);
-    await requireSuccess(cli, pluginArgs("marketplace", "update", MARKETPLACE_NAME), {
+    await requireCliSuccess(cli, pluginArgs("marketplace", "update", MARKETPLACE_NAME), {
       label: "Quandora marketplace refresh",
       timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "Quandora marketplace refresh"),
       env: cliEnv,
     });
   } else {
-    await requireSuccess(
+    await requireCliSuccess(
       cli,
       pluginArgs("marketplace", "add", MARKETPLACE_REPOSITORY, "--name", MARKETPLACE_NAME),
       {
@@ -495,7 +533,7 @@ async function main() {
   emit({ status: "progress", step: "marketplace_ready" });
 
   const listPlugins = async () => parsePluginList(
-    await requireSuccess(cli, pluginArgs("list", "--json"), {
+    await requireCliSuccess(cli, pluginArgs("list", "--json"), {
       label: "WorkBuddy plugin inventory",
       timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "WorkBuddy plugin inventory"),
       env: cliEnv,
@@ -503,13 +541,13 @@ async function main() {
   );
   let plugin = selectUserPlugin(await listPlugins());
   if (!plugin) {
-    await requireSuccess(cli, pluginArgs("install", PLUGIN_ID, "--scope", "user"), {
+    await requireCliSuccess(cli, pluginArgs("install", PLUGIN_ID, "--scope", "user"), {
       label: "Quandora plugin installation",
       timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "Quandora plugin installation"),
       env: cliEnv,
     });
   } else if (!hasRequiredPackageFiles(plugin, configRoot)) {
-    await requireSuccess(cli, pluginArgs("update", PLUGIN_ID, "--scope", "user"), {
+    await requireCliSuccess(cli, pluginArgs("update", PLUGIN_ID, "--scope", "user"), {
       label: "Quandora plugin update",
       timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "Quandora plugin update"),
       env: cliEnv,
@@ -522,7 +560,7 @@ async function main() {
     fail("The installed preview package cannot be replaced safely while WorkBuddy is using it.");
   }
   if (plugin.enabled !== true) {
-    await requireSuccess(cli, pluginArgs("enable", PLUGIN_ID, "--scope", "user"), {
+    await requireCliSuccess(cli, pluginArgs("enable", PLUGIN_ID, "--scope", "user"), {
       label: "Quandora plugin enablement",
       timeoutMs: remainingTimeout(startedAt, CLI_TIMEOUT_MS, "Quandora plugin enablement"),
       env: cliEnv,
@@ -544,13 +582,17 @@ async function main() {
     {
       label: "Quandora authorization",
       timeoutMs: remainingTimeout(startedAt, OAUTH_TIMEOUT_MS, "Quandora authorization"),
-      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      env: { ...cliEnv, ELECTRON_RUN_AS_NODE: "1" },
       onStderrLine: relayOAuthProgress,
     },
   );
   if (oauth.code !== 0) {
     if (oauthFailureRequiresHostUpdate(oauth.stderr)) {
-      fail("Update WorkBuddy from Personal Center, restart it, and retry in a new Agent task.");
+      fail(
+        "This WorkBuddy build does not expose the required native OAuth runtime.",
+        "host_update_required",
+        "Update WorkBuddy from Personal Center, restart it, and retry in a new local Agent task.",
+      );
     }
     fail("Quandora authorization failed.");
   }
@@ -558,8 +600,10 @@ async function main() {
   emit({
     status: "completed",
     installed: true,
+    enabled: true,
     authenticated: true,
     plugin: PLUGIN_ID,
+    scope: "user",
     version: plugin.version,
     protectedProbe: result.protectedProbe,
     toolCount: result.toolCount,
@@ -568,7 +612,16 @@ async function main() {
 }
 
 main().catch((error) => {
-  const message = error instanceof SafeError ? error.message : "The WorkBuddy China installation failed safely.";
-  process.stderr.write(`${JSON.stringify({ status: "failed", message })}\n`);
+  const failure = error instanceof SafeError
+    ? error
+    : new SafeError("The WorkBuddy China installation failed safely.");
+  process.stderr.write(
+    `${JSON.stringify({
+      status: "failed",
+      code: failure.code,
+      message: failure.message,
+      remediation: failure.remediation,
+    })}\n`,
+  );
   process.exitCode = 69;
 }).finally(cleanupTemporaryBootstrap);

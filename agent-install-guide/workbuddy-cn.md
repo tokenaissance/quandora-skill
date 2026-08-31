@@ -31,7 +31,7 @@ trap quandora_cleanup EXIT
   --output "$quandora_bootstrap" \
   'https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/plugins/quandora/scripts/workbuddy-cn-bootstrap-macos.sh' || exit 1
 quandora_bootstrap_sha=$(/usr/bin/shasum -a 256 "$quandora_bootstrap" | /usr/bin/awk '{print $1}')
-[ "$quandora_bootstrap_sha" = '58bc501b279c597f087c6ef20f62b9adf1b758228d47db066cfeabc271574df0' ] || { echo 'Quandora bootstrap integrity check failed.' >&2; exit 1; }
+[ "$quandora_bootstrap_sha" = '055deeb23f06769d6876ad0bef965b3c08784953284932487b7f56535f44f05f' ] || { echo 'Quandora bootstrap integrity check failed.' >&2; exit 1; }
 /bin/sh "$quandora_bootstrap"
 ```
 
@@ -43,9 +43,11 @@ Plugin state changes go only through WorkBuddy's bundled public plugin manager w
 
 Only when the installer emits `{"status":"progress","step":"browser_opened"}`, tell the user that the Quandora browser page is open and wait while they complete sign-in, MFA, and the final authorization action. Do not operate that page or start a second attempt. If stored authorization passes the protected probe, no browser event is emitted and no browser action is required.
 
-Success is one final JSON object whose `status` is `completed`, `installed` and `authenticated` are `true`, `plugin` is `quandora@quandora`, `version` matches the validated marketplace and installed manifests, `protectedProbe` is `fm_status`, and `toolCount` is a positive integer.
+Success is one final JSON object whose `status` is `completed`, `installed`, `enabled`, and `authenticated` are `true`, `plugin` is `quandora@quandora`, `scope` is `user`, `version` matches the validated marketplace and installed manifests, `protectedProbe` is `fm_status`, and `toolCount` is a positive integer.
 
 On `host_login_required`, ask the user to sign in to WorkBuddy, start a new local Agent task, and paste the same one-sentence request again. On `host_update_required`, direct the user to WorkBuddy **Personal Center → Check for Updates**, then restart WorkBuddy and retry in a new task; if the application is missing, use `https://www.codebuddy.cn/work/`. These are the official recovery paths—do not install a standalone CLI or another runtime as a substitute.
+
+On `cli_unhealthy`, ask the user to close the failed task, restart WorkBuddy, and paste the same one-sentence request once in a new local Agent task. If it repeats, direct them to **Personal Center → Check for Updates** before retrying. Do not run a bare CLI, use Terminal as a fallback, or retry inside the failed task.
 
 On any other failed result, report only its safe `message` and `remediation`, then stop. Do not expose subprocess output or retry source conflicts, integrity failures, unsupported hosts, or missing native OAuth capabilities.
 
