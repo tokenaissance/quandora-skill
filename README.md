@@ -165,7 +165,7 @@ On macOS, give a local WorkBuddy China Agent this one-sentence prompt:
 Read https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/agent-install-guide/workbuddy-cn.md completely, then install and authenticate Quandora for me.
 ```
 
-The guide downloads one hash-pinned, repo-owned installer and runs it once with WorkBuddy's bundled runtime. The installer closes CLI stdin, bounds every plugin-manager call, installs and verifies the managed package, then runs the App-native OAuth helper from the plugin cache. The helper writes only Quandora's account-scoped encrypted OAuth slot and verifies the protected `fm_status` tool. Do not create a custom MCP server or paste credentials.
+The guide downloads one hash-pinned, repo-owned macOS bootstrap. That bootstrap discovers the signed local WorkBuddy China application and active config, downloads and verifies the reviewed installer components from this public repository, and runs them with WorkBuddy's bundled runtime. The installer closes CLI stdin, bounds every plugin-manager call, installs and verifies the managed package, writes only Quandora's account-scoped encrypted OAuth slot, and verifies the protected `fm_status` tool. It does not require a fixed application path, config path, WorkBuddy/CLI/plugin version, standalone runtime, custom MCP server, or pasted credential.
 
 #### Kimi Code CLI
 

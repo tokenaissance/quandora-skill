@@ -1,25 +1,17 @@
 #!/usr/bin/env node
 "use strict";
 
-const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
 
-const APP_ROOT = "/Applications/WorkBuddy.app";
 const BUNDLE_ID = "com.tencent.workbuddy.mac";
 const URL_SCHEME = "workbuddy";
-const MIN_APP_VERSION = "5.4.4";
-const MIN_CLI_VERSION = "2.132.0";
 const MARKETPLACE_REPOSITORY = "varsity-tech-product/quandora-plugins";
 const MARKETPLACE_NAME = "quandora";
 const PLUGIN_ID = "quandora@quandora";
 const PLUGIN_NAME = "quandora";
-const PLUGIN_VERSION = "3.0-preview";
 const MCP_URL = "https://mcp.quandora.ai/quant";
-const OAUTH_HELPER_URL = "https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/plugins/quandora/scripts/workbuddy-cn-oauth-macos.js";
-const OAUTH_HELPER_SHA256 = "fae478ad6ef10858397154e18da41ae778c2a75880ef6aaee12e8b6afa032464";
-const OAUTH_HELPER_LIMIT_BYTES = 1024 * 1024;
 const CLI_TIMEOUT_MS = 2 * 60 * 1000;
 const OAUTH_TIMEOUT_MS = 7 * 60 * 1000;
 const INSTALL_TIMEOUT_MS = 9 * 60 * 1000 + 30 * 1000;
@@ -42,6 +34,20 @@ const EXPECTED_SKILLS = [
   "strategy-analysis",
   "paper-trading",
 ];
+const OAUTH_PROGRESS_STEPS = new Set([
+  "oauth_runtime_ready",
+  "protected_probe_started",
+  "protected_probe_completed",
+  "oauth_discovery_started",
+  "oauth_discovery_completed",
+  "callback_listener_ready",
+  "browser_opened",
+  "callback_received",
+  "token_exchange_started",
+  "token_exchange_completed",
+  "authorization_saved",
+  "workbuddy_notified",
+]);
 
 class SafeError extends Error {}
 
@@ -77,71 +83,19 @@ function isInside(parent, child) {
   return relative !== "" && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 
-function compareVersions(left, right) {
-  const parse = (value) => {
-    const match = String(value).match(/^(\d+)\.(\d+)\.(\d+)/);
-    if (!match) fail("A required WorkBuddy version has an unsupported format.");
-    return match.slice(1).map(Number);
-  };
-  const a = parse(left);
-  const b = parse(right);
-  for (let index = 0; index < 3; index += 1) {
-    if (a[index] !== b[index]) return a[index] < b[index] ? -1 : 1;
-  }
-  return 0;
-}
-
 function emit(payload) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
 }
 
-function sha256(filePath) {
-  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
-}
-
-function validateBootstrapOAuthHelper(helperPath, installerPath) {
+function resolveBootstrapOAuthHelper(helperPath, installerPath) {
   const reviewedHelperPath = realpath(helperPath, "Reviewed Quandora OAuth helper");
   if (
     path.basename(reviewedHelperPath) !== "workbuddy-cn-oauth-macos.js" ||
-    path.dirname(reviewedHelperPath) !== path.dirname(installerPath) ||
-    sha256(reviewedHelperPath) !== OAUTH_HELPER_SHA256
+    path.dirname(reviewedHelperPath) !== path.dirname(installerPath)
   ) {
     fail("The reviewed Quandora OAuth helper is missing or invalid.");
   }
   return reviewedHelperPath;
-}
-
-async function prepareBootstrapOAuthHelper() {
-  const installerPath = realpath(__filename, "Reviewed Quandora installer");
-  const helperPath = path.join(path.dirname(installerPath), "workbuddy-cn-oauth-macos.js");
-  if (fs.existsSync(helperPath)) {
-    return validateBootstrapOAuthHelper(helperPath, installerPath);
-  }
-
-  let response;
-  try {
-    response = await fetch(OAUTH_HELPER_URL, {
-      redirect: "error",
-      signal: AbortSignal.timeout(30 * 1000),
-    });
-  } catch {
-    fail("The reviewed Quandora OAuth helper could not be downloaded.");
-  }
-  if (!response.ok) fail("The reviewed Quandora OAuth helper could not be downloaded.");
-  const bytes = Buffer.from(await response.arrayBuffer());
-  if (
-    bytes.length === 0 ||
-    bytes.length > OAUTH_HELPER_LIMIT_BYTES ||
-    crypto.createHash("sha256").update(bytes).digest("hex") !== OAUTH_HELPER_SHA256
-  ) {
-    fail("The downloaded Quandora OAuth helper failed its integrity check.");
-  }
-  try {
-    fs.writeFileSync(helperPath, bytes, { flag: "wx", mode: 0o600 });
-  } catch {
-    fail("The reviewed Quandora OAuth helper could not be prepared.");
-  }
-  return validateBootstrapOAuthHelper(helperPath, installerPath);
 }
 
 function createCliEnv(configRoot) {
@@ -184,13 +138,14 @@ function cleanupTemporaryBootstrap() {
 }
 
 async function runProcess(command, args, options) {
-  const { label, timeoutMs, env = process.env } = options;
+  const { label, timeoutMs, env = process.env, onStderrLine } = options;
   return new Promise((resolve, reject) => {
     let settled = false;
     let timedOut = false;
     let oversized = false;
     let stdout = Buffer.alloc(0);
     let stderr = Buffer.alloc(0);
+    let pendingStderr = "";
     let killTimer;
     let timeout;
 
@@ -230,11 +185,21 @@ async function runProcess(command, args, options) {
     });
     child.stderr.on("data", (chunk) => {
       stderr = append(stderr, chunk);
+      if (onStderrLine) {
+        pendingStderr += chunk.toString("utf8");
+        let newline = pendingStderr.indexOf("\n");
+        while (newline !== -1) {
+          onStderrLine(pendingStderr.slice(0, newline));
+          pendingStderr = pendingStderr.slice(newline + 1);
+          newline = pendingStderr.indexOf("\n");
+        }
+      }
     });
     child.on("error", () => {
       finish(new SafeError(`${label} could not be started.`));
     });
     child.on("close", (code, signal) => {
+      if (onStderrLine && pendingStderr) onStderrLine(pendingStderr);
       if (timedOut) {
         finish(new SafeError(`${label} timed out.`));
         return;
@@ -256,6 +221,36 @@ async function runProcess(command, args, options) {
       terminate();
     }, timeoutMs);
   });
+}
+
+function relayOAuthProgress(line) {
+  let payload;
+  try {
+    payload = JSON.parse(line);
+  } catch {
+    return;
+  }
+  if (
+    payload?.status === "progress" &&
+    typeof payload.step === "string" &&
+    OAUTH_PROGRESS_STEPS.has(payload.step)
+  ) {
+    emit({ status: "progress", step: payload.step });
+  }
+}
+
+function oauthFailureRequiresHostUpdate(stderr) {
+  for (const line of stderr.split(/\r?\n/).reverse()) {
+    try {
+      const payload = JSON.parse(line);
+      if (payload?.status === "failed" && payload?.code === "host_update_required") {
+        return true;
+      }
+    } catch {
+      // Ignore non-JSON runtime diagnostics.
+    }
+  }
+  return false;
 }
 
 async function requireSuccess(command, args, options) {
@@ -310,15 +305,16 @@ function validateMarketplace(marketplace, configRoot) {
   const entries = manifest?.plugins;
   if (!Array.isArray(entries)) fail("The Quandora marketplace manifest is invalid.");
   const plugin = entries.find((entry) => entry?.name === PLUGIN_NAME);
+  const version = requireString(plugin?.version, "Quandora marketplace version");
   if (
     manifest?.name !== MARKETPLACE_NAME ||
-    manifest?.version !== PLUGIN_VERSION ||
-    plugin?.version !== PLUGIN_VERSION ||
+    manifest?.version !== version ||
+    !/^[0-9A-Za-z][0-9A-Za-z.+-]{0,63}$/.test(version) ||
     plugin?.source !== "./plugins/quandora"
   ) {
     fail("The Quandora marketplace package declaration is invalid.");
   }
-  return plugin.version;
+  return version;
 }
 
 function parsePluginList(stdout) {
@@ -344,8 +340,6 @@ function requiredRuntimeFiles(pluginRoot) {
   return [
     path.join(pluginRoot, ".codebuddy-plugin", "plugin.json"),
     path.join(pluginRoot, "mcp.json"),
-    path.join(pluginRoot, "scripts", "workbuddy-cn-auth-macos.sh"),
-    path.join(pluginRoot, "scripts", "workbuddy-cn-oauth-macos.js"),
     ...EXPECTED_SKILLS.map((skill) => path.join(pluginRoot, "skills", skill, "SKILL.md")),
   ];
 }
@@ -364,7 +358,7 @@ function hasRequiredPackageFiles(entry, configRoot) {
 
 function validateInstalledPlugin(entry, configRoot, marketplaceVersion) {
   if (!entry || entry.enabled !== true) fail("Quandora is not enabled for the WorkBuddy user.");
-  if (entry.version !== marketplaceVersion || entry.version !== PLUGIN_VERSION) {
+  if (entry.version !== marketplaceVersion) {
     fail("The installed Quandora version does not match the marketplace.");
   }
 
@@ -424,44 +418,51 @@ async function main() {
   const startedAt = Date.now();
   if (process.platform !== "darwin") fail("This installer supports macOS only.");
   const [appRootArgument, configRootArgument] = process.argv.slice(2);
-  const appRoot = realpath(appRootArgument || APP_ROOT, "WorkBuddy application");
-  const expectedAppRoot = realpath(APP_ROOT, "WorkBuddy application");
-  if (appRoot !== expectedAppRoot) fail("The application is not the supported WorkBuddy China installation.");
-
-  const home = realpath(requireString(process.env.HOME, "Home directory"), "Home directory");
-  const expectedConfigRoot = realpath(path.join(home, ".workbuddy"), "WorkBuddy configuration directory");
-  const configRoot = realpath(configRootArgument || expectedConfigRoot, "WorkBuddy configuration directory");
-  if (configRoot !== expectedConfigRoot) fail("The config path is not the active WorkBuddy China directory.");
+  const appRoot = realpath(
+    requireString(appRootArgument, "WorkBuddy application path"),
+    "WorkBuddy application",
+  );
+  const configRoot = realpath(
+    requireString(configRootArgument, "WorkBuddy configuration path"),
+    "WorkBuddy configuration directory",
+  );
 
   const infoPlist = path.join(appRoot, "Contents", "Info.plist");
-  const [bundleId, appVersion, urlScheme] = await Promise.all([
+  const [bundleId, urlScheme] = await Promise.all([
     plutilValue(infoPlist, "CFBundleIdentifier"),
-    plutilValue(infoPlist, "CFBundleShortVersionString"),
     plutilValue(infoPlist, "CFBundleURLTypes.0.CFBundleURLSchemes.0"),
   ]);
   if (bundleId !== BUNDLE_ID || urlScheme !== URL_SCHEME) {
     fail("The application identity is not WorkBuddy China.");
   }
-  if (compareVersions(appVersion, MIN_APP_VERSION) < 0) {
-    fail(`WorkBuddy China ${MIN_APP_VERSION} or newer is required.`);
-  }
   validateAccount(configRoot);
-  const oauthHelper = await prepareBootstrapOAuthHelper();
+  const installerPath = realpath(__filename, "Reviewed Quandora installer");
+  const oauthHelper = resolveBootstrapOAuthHelper(
+    path.join(path.dirname(installerPath), "workbuddy-cn-oauth-macos.js"),
+    installerPath,
+  );
+
+  const electron = realpath(
+    path.join(appRoot, "Contents", "MacOS", "Electron"),
+    "WorkBuddy bundled runtime",
+  );
+  if (realpath(process.execPath, "Active runtime") !== electron) {
+    fail("The installer is not running with the selected WorkBuddy application runtime.");
+  }
 
   const cli = realpath(
     path.join(appRoot, "Contents", "Resources", "app.asar.unpacked", "cli", "bin", "codebuddy"),
     "WorkBuddy bundled CLI",
   );
   const cliEnv = createCliEnv(configRoot);
-  const cliVersion = (
-    await requireSuccess(cli, ["--version"], {
-      label: "WorkBuddy CLI version check",
+  try {
+    await requireSuccess(cli, pluginArgs("--help"), {
+      label: "WorkBuddy headless plugin manager check",
       timeoutMs: 30 * 1000,
       env: cliEnv,
-    })
-  ).trim();
-  if (compareVersions(cliVersion, MIN_CLI_VERSION) < 0) {
-    fail(`WorkBuddy's bundled CLI ${MIN_CLI_VERSION} or newer is required.`);
+    });
+  } catch {
+    fail("Update WorkBuddy from Personal Center, restart it, and retry in a new Agent task.");
   }
   emit({ status: "progress", step: "host_verified" });
 
@@ -531,10 +532,9 @@ async function main() {
 
   const pluginRoot = validateInstalledPlugin(plugin, configRoot, marketplaceVersion);
   emit({ status: "progress", step: "plugin_ready" });
-  emit({ status: "progress", step: "browser_authorization_starting" });
 
   const oauth = await runProcess(
-    path.join(appRoot, "Contents", "MacOS", "Electron"),
+    electron,
     [
       oauthHelper,
       pluginRoot,
@@ -545,9 +545,15 @@ async function main() {
       label: "Quandora authorization",
       timeoutMs: remainingTimeout(startedAt, OAUTH_TIMEOUT_MS, "Quandora authorization"),
       env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
+      onStderrLine: relayOAuthProgress,
     },
   );
-  if (oauth.code !== 0) fail("Quandora authorization failed.");
+  if (oauth.code !== 0) {
+    if (oauthFailureRequiresHostUpdate(oauth.stderr)) {
+      fail("Update WorkBuddy from Personal Center, restart it, and retry in a new Agent task.");
+    }
+    fail("Quandora authorization failed.");
+  }
   const result = parseOAuthResult(oauth.stdout);
   emit({
     status: "completed",

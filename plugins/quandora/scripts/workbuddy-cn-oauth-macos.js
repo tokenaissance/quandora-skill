@@ -14,7 +14,12 @@ const PROTOCOL_VERSION = "2025-06-18";
 const CALLBACK_TIMEOUT_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 30 * 1000;
 
-class SafeError extends Error {}
+class SafeError extends Error {
+  constructor(message, code = "authorization_failed") {
+    super(message);
+    this.code = code;
+  }
+}
 class AuthenticationRequiredError extends SafeError {}
 
 function suppressRuntimeConsole() {
@@ -27,8 +32,8 @@ function suppressRuntimeConsole() {
   console.warn = () => {};
 }
 
-function fail(message) {
-  throw new SafeError(message);
+function fail(message, code) {
+  throw new SafeError(message, code);
 }
 
 function emitProgress(step) {
@@ -495,13 +500,9 @@ async function main() {
   const pluginRoot = fs.realpathSync(requireString(pluginRootArgument, "Plugin path"));
   const configRoot = fs.realpathSync(requireString(configRootArgument, "Config path"));
   const appRoot = fs.realpathSync(requireString(appRootArgument, "WorkBuddy app path"));
-  if (appRoot !== fs.realpathSync("/Applications/WorkBuddy.app")) {
-    fail("The app path is not the supported WorkBuddy China installation.");
-  }
-  if (
-    configRoot !== fs.realpathSync(path.join(process.env.HOME, ".workbuddy"))
-  ) {
-    fail("The config path is not the active WorkBuddy China directory.");
+  const electron = fs.realpathSync(path.join(appRoot, "Contents", "MacOS", "Electron"));
+  if (fs.realpathSync(process.execPath) !== electron) {
+    fail("The helper is not running with the selected WorkBuddy application runtime.");
   }
   const pluginCache = fs.realpathSync(path.join(configRoot, "plugins", "cache"));
   if (!pluginRoot.startsWith(`${pluginCache}${path.sep}`)) {
@@ -515,6 +516,9 @@ async function main() {
   const ConnectorOAuthStore = tarModule.ConnectorOAuthStore;
   const auth = authModule.auth_exports;
   if (
+    typeof fetch !== "function" ||
+    typeof globalThis.AbortSignal?.timeout !== "function" ||
+    typeof globalThis.AbortSignal?.any !== "function" ||
     typeof ConnectorOAuthStore !== "function" ||
     !auth ||
     typeof auth.discoverOAuthProtectedResourceMetadata !== "function" ||
@@ -524,18 +528,17 @@ async function main() {
     typeof auth.exchangeAuthorization !== "function" ||
     typeof auth.refreshAuthorization !== "function"
   ) {
-    fail("This WorkBuddy build does not expose the required native OAuth runtime.");
+    fail(
+      "This WorkBuddy build does not expose the required native OAuth runtime.",
+      "host_update_required",
+    );
   }
   emitProgress("oauth_runtime_ready");
 
   const store = new ConnectorOAuthStore(resolveActiveUserId(configRoot));
-  const forceAuthorization =
-    process.env.QUANDORA_WORKBUDDY_FORCE_REAUTH === "1";
-  let tokens = forceAuthorization
-    ? undefined
-    : store.loadTokens(CONFIG_ID, MCP_URL);
+  let tokens = store.loadTokens(CONFIG_ID, MCP_URL);
   let toolCount;
-  if (!forceAuthorization && tokens?.access_token) {
+  if (tokens?.access_token) {
     try {
       toolCount = await verifyProtectedTool(tokens);
     } catch (error) {
@@ -546,9 +549,7 @@ async function main() {
   let reusedAuthorization = toolCount !== undefined;
   if (toolCount === undefined) {
     const oauth = await discoverOAuth(auth);
-    tokens = forceAuthorization
-      ? null
-      : await refreshStoredTokens(auth, store, oauth, tokens);
+    tokens = await refreshStoredTokens(auth, store, oauth, tokens);
     if (tokens?.access_token) {
       try {
         toolCount = await verifyProtectedTool(tokens);
@@ -583,6 +584,10 @@ if (require.main === module) {
     process.stderr.write(
       `${JSON.stringify({
         status: "failed",
+        code:
+          error instanceof SafeError
+            ? error.code
+            : "authorization_failed",
         message:
           error instanceof SafeError
             ? error.message
