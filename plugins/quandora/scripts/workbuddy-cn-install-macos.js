@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 "use strict";
 
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const { spawn } = require("node:child_process");
@@ -16,6 +17,9 @@ const PLUGIN_ID = "quandora@quandora";
 const PLUGIN_NAME = "quandora";
 const PLUGIN_VERSION = "3.0-preview";
 const MCP_URL = "https://mcp.quandora.ai/quant";
+const OAUTH_HELPER_URL = "https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/plugins/quandora/scripts/workbuddy-cn-oauth-macos.js";
+const OAUTH_HELPER_SHA256 = "fae478ad6ef10858397154e18da41ae778c2a75880ef6aaee12e8b6afa032464";
+const OAUTH_HELPER_LIMIT_BYTES = 1024 * 1024;
 const CLI_TIMEOUT_MS = 2 * 60 * 1000;
 const OAUTH_TIMEOUT_MS = 7 * 60 * 1000;
 const INSTALL_TIMEOUT_MS = 9 * 60 * 1000 + 30 * 1000;
@@ -91,6 +95,55 @@ function emit(payload) {
   process.stdout.write(`${JSON.stringify(payload)}\n`);
 }
 
+function sha256(filePath) {
+  return crypto.createHash("sha256").update(fs.readFileSync(filePath)).digest("hex");
+}
+
+function validateBootstrapOAuthHelper(helperPath, installerPath) {
+  const reviewedHelperPath = realpath(helperPath, "Reviewed Quandora OAuth helper");
+  if (
+    path.basename(reviewedHelperPath) !== "workbuddy-cn-oauth-macos.js" ||
+    path.dirname(reviewedHelperPath) !== path.dirname(installerPath) ||
+    sha256(reviewedHelperPath) !== OAUTH_HELPER_SHA256
+  ) {
+    fail("The reviewed Quandora OAuth helper is missing or invalid.");
+  }
+  return reviewedHelperPath;
+}
+
+async function prepareBootstrapOAuthHelper() {
+  const installerPath = realpath(__filename, "Reviewed Quandora installer");
+  const helperPath = path.join(path.dirname(installerPath), "workbuddy-cn-oauth-macos.js");
+  if (fs.existsSync(helperPath)) {
+    return validateBootstrapOAuthHelper(helperPath, installerPath);
+  }
+
+  let response;
+  try {
+    response = await fetch(OAUTH_HELPER_URL, {
+      redirect: "error",
+      signal: AbortSignal.timeout(30 * 1000),
+    });
+  } catch {
+    fail("The reviewed Quandora OAuth helper could not be downloaded.");
+  }
+  if (!response.ok) fail("The reviewed Quandora OAuth helper could not be downloaded.");
+  const bytes = Buffer.from(await response.arrayBuffer());
+  if (
+    bytes.length === 0 ||
+    bytes.length > OAUTH_HELPER_LIMIT_BYTES ||
+    crypto.createHash("sha256").update(bytes).digest("hex") !== OAUTH_HELPER_SHA256
+  ) {
+    fail("The downloaded Quandora OAuth helper failed its integrity check.");
+  }
+  try {
+    fs.writeFileSync(helperPath, bytes, { flag: "wx", mode: 0o600 });
+  } catch {
+    fail("The reviewed Quandora OAuth helper could not be prepared.");
+  }
+  return validateBootstrapOAuthHelper(helperPath, installerPath);
+}
+
 function createCliEnv(configRoot) {
   const env = { ...process.env };
   for (const key of AGENT_ROUTING_ENV_KEYS) delete env[key];
@@ -121,6 +174,8 @@ function cleanupTemporaryBootstrap() {
     ) {
       return;
     }
+    const oauthHelperPath = path.join(installerDirectory, "workbuddy-cn-oauth-macos.js");
+    if (fs.existsSync(oauthHelperPath)) fs.unlinkSync(oauthHelperPath);
     fs.unlinkSync(installerPath);
     fs.rmdirSync(installerDirectory);
   } catch {
@@ -391,6 +446,7 @@ async function main() {
     fail(`WorkBuddy China ${MIN_APP_VERSION} or newer is required.`);
   }
   validateAccount(configRoot);
+  const oauthHelper = await prepareBootstrapOAuthHelper();
 
   const cli = realpath(
     path.join(appRoot, "Contents", "Resources", "app.asar.unpacked", "cli", "bin", "codebuddy"),
@@ -478,16 +534,17 @@ async function main() {
   emit({ status: "progress", step: "browser_authorization_starting" });
 
   const oauth = await runProcess(
-    "/bin/sh",
+    path.join(appRoot, "Contents", "MacOS", "Electron"),
     [
-      path.join(pluginRoot, "scripts", "workbuddy-cn-auth-macos.sh"),
-      appRoot,
+      oauthHelper,
+      pluginRoot,
       configRoot,
+      appRoot,
     ],
     {
       label: "Quandora authorization",
       timeoutMs: remainingTimeout(startedAt, OAUTH_TIMEOUT_MS, "Quandora authorization"),
-      env: process.env,
+      env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
     },
   );
   if (oauth.code !== 0) fail("Quandora authorization failed.");
