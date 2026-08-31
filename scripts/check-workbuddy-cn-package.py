@@ -16,6 +16,7 @@ GUIDE = ROOT / "agent-install-guide" / "workbuddy-cn.md"
 INSTALLER = PLUGIN / "scripts" / "workbuddy-cn-install-macos.js"
 WRAPPER = PLUGIN / "scripts" / "workbuddy-cn-auth-macos.sh"
 OAUTH = PLUGIN / "scripts" / "workbuddy-cn-oauth-macos.js"
+CALLBACK_TEST = ROOT / "scripts" / "test-workbuddy-cn-oauth-callback.js"
 
 
 def read_json(path: Path) -> dict:
@@ -90,11 +91,15 @@ def main() -> None:
         "https://mcp.quandora.ai/quant",
         "plugins/quandora/scripts/workbuddy-cn-install-macos.js",
         "Do not ask for another conversational confirmation.",
+        "600000",
+        "curl --proto '=https' --tlsv1.2 --location --fail",
+        'ELECTRON_RUN_AS_NODE=1 /Applications/WorkBuddy.app/Contents/MacOS/Electron',
     ):
         require(expected in guide, f"guide is missing {expected}")
     installer_sha256 = hashlib.sha256(INSTALLER.read_bytes()).hexdigest()
     require(installer_sha256 in guide, "guide does not pin the installer SHA-256")
     require("codebuddy plugin" not in guide, "guide still orchestrates bare plugin commands")
+    require("/bin/rm" not in guide, "guide asks the shell to delete files")
 
     installer_requirements = (
         'const MARKETPLACE_REPOSITORY = "varsity-tech-product/quandora-plugins";',
@@ -103,11 +108,22 @@ def main() -> None:
         'const MCP_URL = "https://mcp.quandora.ai/quant";',
         'stdio: ["ignore", "pipe", "pipe"]',
         "shell: false",
-        "const CLI_TIMEOUT_MS = 3 * 60 * 1000;",
-        'CODEBUDDY_CONFIG_DIR: configRoot',
-        '["plugin", "marketplace", "add", MARKETPLACE_REPOSITORY, "--name", MARKETPLACE_NAME]',
-        '["plugin", "install", PLUGIN_ID, "--scope", "user"]',
-        '["plugin", "enable", PLUGIN_ID, "--scope", "user"]',
+        "const CLI_TIMEOUT_MS = 2 * 60 * 1000;",
+        "const INSTALL_TIMEOUT_MS = 9 * 60 * 1000 + 30 * 1000;",
+        "env.CODEBUDDY_CONFIG_DIR = configRoot;",
+        'return ["plugin", ...args, "--", "--print"];',
+        'pluginArgs("marketplace", "add", MARKETPLACE_REPOSITORY, "--name", MARKETPLACE_NAME)',
+        'pluginArgs("install", PLUGIN_ID, "--scope", "user")',
+        'pluginArgs("enable", PLUGIN_ID, "--scope", "user")',
+        '"CODEBUDDY_SESSION_ID"',
+        '"CODEBUDDY_TOOL_CALL_ID"',
+        '"CODEBUDDY_CONVERSATION_REQUEST_ID"',
+        '"CODEBUDDY_MCP_CONFIG"',
+        '"CODEBUDDY_SERVICE_PROXY_URL"',
+        'path.basename(installerPath) !== "workbuddy-cn-install-macos.js"',
+        '!isInside(temporaryRoot, installerDirectory)',
+        "fs.unlinkSync(installerPath)",
+        "fs.rmdirSync(installerDirectory)",
         'step: "browser_authorization_starting"',
         'path.join(pluginRoot, "scripts", "workbuddy-cn-auth-macos.sh")',
     )
@@ -123,6 +139,11 @@ def main() -> None:
         "globSync",
         ".credentials.json",
         "purgeByServerName",
+        "runningInstallerHash",
+        'require("node:crypto")',
+        '["plugin", "marketplace"',
+        '["plugin", "install"',
+        '["plugin", "enable"',
     ):
         require(forbidden not in installer, f"installer exceeds scope: {forbidden}")
 
@@ -146,6 +167,14 @@ def main() -> None:
         'spawnSync("/usr/bin/open"',
         'fs.utimesSync(registry, now, now)',
         "AbortSignal.timeout(REQUEST_TIMEOUT_MS)",
+        "AbortSignal.any([init.signal, timeoutSignal])",
+        "fetchFn: boundedFetch",
+        'emitProgress("callback_received")',
+        'emitProgress("token_exchange_completed")',
+        "callbackResponse.shouldKeepAlive = false",
+        'Connection: "close"',
+        "server.closeAllConnections?.()",
+        "module.exports = { createCallbackServer };",
         "error instanceof SafeError",
     )
     for expected in oauth_requirements:
@@ -171,6 +200,8 @@ def main() -> None:
     require(wrapper_mode & stat.S_IXUSR, "macOS wrapper is not executable")
     installer_mode = INSTALLER.stat().st_mode
     require(installer_mode & stat.S_IXUSR, "macOS installer is not executable")
+    callback_test_mode = CALLBACK_TEST.stat().st_mode
+    require(callback_test_mode & stat.S_IXUSR, "OAuth callback test is not executable")
     print(
         json.dumps(
             {
@@ -179,6 +210,8 @@ def main() -> None:
                 "platform": "workbuddy-cn-macos",
                 "credentialReads": "quandora-slot-only",
                 "installerCliStdin": "closed",
+                "installerCliMode": "headless-print",
+                "agentRoutingEnvironment": "removed",
             },
             separators=(",", ":"),
         )

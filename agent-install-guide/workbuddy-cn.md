@@ -24,17 +24,30 @@ Do not create a separate MCP entry. Never request, read, print, copy, or relay a
 
 ## Run the reviewed installer once
 
-Use one foreground shell tool call for the complete bootstrap below. Do not split it into separate approvals, run bare `codebuddy` commands, add a TTY, pipe a CLI through `head`, retry in a loop, or use `--serve` or `--prewarm`.
+Invoke the following block unchanged as one foreground shell tool call and set that tool call's timeout to `600000` milliseconds. Do not split it into separate approvals, run bare `codebuddy` commands, add a TTY, pipe a CLI through `head`, retry in a loop, or use `--serve` or `--prewarm`.
 
-1. Set `umask 077` and create one private temporary directory with `/usr/bin/mktemp -d`.
-2. Download only `https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/plugins/quandora/scripts/workbuddy-cn-install-macos.js` to that directory. Use `/usr/bin/curl` with HTTPS-only, redirect-following, fail-on-HTTP-error behavior. Never pipe a download into a shell or runtime.
-3. Verify the downloaded file with `/usr/bin/shasum -a 256`. Its exact SHA-256 must be `c09486aac4df73cd7b57c46c34b1655ee098497bbadb07ae4889e1796964c384`. Stop before execution if it differs.
-4. Run that exact file once with WorkBuddy's bundled Electron in Node mode, passing `/Applications/WorkBuddy.app` and `$HOME/.workbuddy` as its two arguments. The executable is `/Applications/WorkBuddy.app/Contents/MacOS/Electron` and the required environment setting is `ELECTRON_RUN_AS_NODE=1`.
-5. Wait for the foreground process to finish, then remove only the private temporary directory created in step 1.
+```sh
+umask 077
+quandora_tmp_root="${TMPDIR:-/tmp}"
+quandora_tmp_dir=$(/usr/bin/mktemp -d "${quandora_tmp_root%/}/quandora-workbuddy.XXXXXX") || exit 1
+quandora_installer="${quandora_tmp_dir}/workbuddy-cn-install-macos.js"
+/usr/bin/curl --proto '=https' --tlsv1.2 --location --fail --silent --show-error \
+  --output "$quandora_installer" \
+  'https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/plugins/quandora/scripts/workbuddy-cn-install-macos.js' || exit 1
+quandora_installer_sha=$(/usr/bin/shasum -a 256 "$quandora_installer" | /usr/bin/awk '{print $1}')
+if [ "$quandora_installer_sha" != 'd9831385e36c2c315f4047f525e477be9bcf5dcb5f259fdce28a00c3bca94fb0' ]; then
+  echo 'Quandora installer integrity check failed.' >&2
+  exit 1
+fi
+ELECTRON_RUN_AS_NODE=1 /Applications/WorkBuddy.app/Contents/MacOS/Electron \
+  "$quandora_installer" /Applications/WorkBuddy.app "$HOME/.workbuddy"
+```
 
-The installer owns every preflight, marketplace operation, plugin operation, package check, OAuth launch, and verification step. It closes stdin for every WorkBuddy CLI child, uses argument arrays without shell interpolation, bounds each CLI call to three minutes, and never starts a server or prewarm process.
+This bootstrap downloads one reviewed JavaScript file without executing the network stream and verifies its exact SHA-256. On exit, the installer removes itself only when its exact filename and private `quandora-workbuddy.*` temporary directory are both inside the operating system's temporary root. The installer owns every preflight, marketplace operation, plugin operation, package check, OAuth launch, and verification step.
 
-The installer reads only the WorkBuddy application identity, active account snapshot, marketplace registry, plugin inventory, and the exact installed Quandora package. It writes plugin state only through WorkBuddy's bundled plugin manager. After installation it runs the OAuth helper from WorkBuddy's managed plugin cache; that helper stores only Quandora's account-scoped encrypted OAuth slots and touches the plugin registry so the running App reloads it.
+For plugin-manager operations the installer closes stdin, uses argument arrays without shell interpolation, forces WorkBuddy's public `--print` headless mode, removes only inherited Agent session-routing variables from those child processes, and preserves WorkBuddy's sandbox and approval environment. Each CLI call is bounded to two minutes, the whole installer to nine and a half minutes, and no server or prewarm process is started.
+
+The installer reads only the WorkBuddy application identity, active account snapshot, marketplace registry, plugin inventory, and the exact installed Quandora package. It writes plugin state only through WorkBuddy's bundled plugin manager. After installation it runs the OAuth helper from WorkBuddy's managed plugin cache; that helper accepts only an exact loopback callback, bounds each OAuth request, closes the browser callback connection after token exchange, stores only Quandora's account-scoped encrypted OAuth slots, and touches the plugin registry so the running App reloads it.
 
 ## User action and completion
 
