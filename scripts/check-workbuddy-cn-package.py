@@ -98,6 +98,7 @@ def main() -> None:
         require(expected in guide, f"guide is missing {expected}")
     installer_sha256 = hashlib.sha256(INSTALLER.read_bytes()).hexdigest()
     require(installer_sha256 in guide, "guide does not pin the installer SHA-256")
+    oauth_sha256 = hashlib.sha256(OAUTH.read_bytes()).hexdigest()
     require("codebuddy plugin" not in guide, "guide still orchestrates bare plugin commands")
     require("/bin/rm" not in guide, "guide asks the shell to delete files")
 
@@ -106,6 +107,8 @@ def main() -> None:
         'const PLUGIN_ID = "quandora@quandora";',
         'const PLUGIN_VERSION = "3.0-preview";',
         'const MCP_URL = "https://mcp.quandora.ai/quant";',
+        'const OAUTH_HELPER_URL = "https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/plugins/quandora/scripts/workbuddy-cn-oauth-macos.js";',
+        f'const OAUTH_HELPER_SHA256 = "{oauth_sha256}";',
         'stdio: ["ignore", "pipe", "pipe"]',
         "shell: false",
         "const CLI_TIMEOUT_MS = 2 * 60 * 1000;",
@@ -124,8 +127,15 @@ def main() -> None:
         '!isInside(temporaryRoot, installerDirectory)',
         "fs.unlinkSync(installerPath)",
         "fs.rmdirSync(installerDirectory)",
+        'path.basename(reviewedHelperPath) !== "workbuddy-cn-oauth-macos.js"',
+        "path.dirname(reviewedHelperPath) !== path.dirname(installerPath)",
+        "sha256(reviewedHelperPath) !== OAUTH_HELPER_SHA256",
+        'redirect: "error"',
+        "signal: AbortSignal.timeout(30 * 1000)",
+        'fs.writeFileSync(helperPath, bytes, { flag: "wx", mode: 0o600 })',
+        'path.join(appRoot, "Contents", "MacOS", "Electron")',
+        'env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" }',
         'step: "browser_authorization_starting"',
-        'path.join(pluginRoot, "scripts", "workbuddy-cn-auth-macos.sh")',
     )
     for expected in installer_requirements:
         require(expected in installer, f"installer is missing {expected}")
@@ -140,7 +150,6 @@ def main() -> None:
         ".credentials.json",
         "purgeByServerName",
         "runningInstallerHash",
-        'require("node:crypto")',
         '["plugin", "marketplace"',
         '["plugin", "install"',
         '["plugin", "enable"',
@@ -212,6 +221,7 @@ def main() -> None:
                 "installerCliStdin": "closed",
                 "installerCliMode": "headless-print",
                 "agentRoutingEnvironment": "removed",
+                "oauthHelper": "bootstrap-hash-pinned",
             },
             separators=(",", ":"),
         )
