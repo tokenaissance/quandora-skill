@@ -13,8 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "quandora"
 GUIDE = ROOT / "agent-install-guide" / "workbuddy-cn.md"
+BOOTSTRAP = PLUGIN / "scripts" / "workbuddy-cn-bootstrap-macos.sh"
 INSTALLER = PLUGIN / "scripts" / "workbuddy-cn-install-macos.js"
-WRAPPER = PLUGIN / "scripts" / "workbuddy-cn-auth-macos.sh"
 OAUTH = PLUGIN / "scripts" / "workbuddy-cn-oauth-macos.js"
 CALLBACK_TEST = ROOT / "scripts" / "test-workbuddy-cn-oauth-callback.js"
 
@@ -26,6 +26,10 @@ def read_json(path: Path) -> dict:
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(message)
+
+
+def digest(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 def main() -> None:
@@ -56,11 +60,12 @@ def main() -> None:
         require(payload["name"] == "quandora", f"wrong plugin name: {path}")
         versions.append(payload["version"])
     require(len(versions) == 9 and len(set(versions)) == 1, "package versions differ")
-    require(versions[0] == "3.0-preview", "WorkBuddy fix must not change package version")
+    require(versions[0] == "3.0-preview", "WorkBuddy repair changed package version")
 
     mcp = read_json(PLUGIN / "mcp.json")["mcpServers"]
     require(
-        mcp == {
+        mcp
+        == {
             "quandora": {
                 "type": "http",
                 "url": "https://mcp.quandora.ai/quant",
@@ -78,37 +83,90 @@ def main() -> None:
         require((PLUGIN / "skills" / skill / "SKILL.md").is_file(), f"missing {skill}")
 
     guide = GUIDE.read_text(encoding="utf-8")
+    bootstrap = BOOTSTRAP.read_text(encoding="utf-8")
     installer = INSTALLER.read_text(encoding="utf-8")
-    wrapper = WRAPPER.read_text(encoding="utf-8")
     oauth = OAUTH.read_text(encoding="utf-8")
     require(
-        "quandora-staging" not in guide + installer + wrapper + oauth,
+        "quandora-staging" not in guide + bootstrap + installer + oauth,
         "staging identity leaked",
     )
+
+    bootstrap_url = (
+        "https://raw.githubusercontent.com/varsity-tech-product/"
+        "quandora-plugins/main/plugins/quandora/scripts/"
+        "workbuddy-cn-bootstrap-macos.sh"
+    )
     for expected in (
+        bootstrap_url,
         "varsity-tech-product/quandora-plugins",
         "quandora@quandora",
         "https://mcp.quandora.ai/quant",
-        "plugins/quandora/scripts/workbuddy-cn-install-macos.js",
-        "Do not ask for another conversational confirmation.",
         "600000",
         "curl --proto '=https' --tlsv1.2 --location --fail",
-        'ELECTRON_RUN_AS_NODE=1 /Applications/WorkBuddy.app/Contents/MacOS/Electron',
+        '/bin/sh "$quandora_bootstrap"',
+        "Personal Center",
+        "https://www.codebuddy.cn/work/",
     ):
         require(expected in guide, f"guide is missing {expected}")
-    installer_sha256 = hashlib.sha256(INSTALLER.read_bytes()).hexdigest()
-    require(installer_sha256 in guide, "guide does not pin the installer SHA-256")
-    oauth_sha256 = hashlib.sha256(OAUTH.read_bytes()).hexdigest()
-    require("codebuddy plugin" not in guide, "guide still orchestrates bare plugin commands")
-    require("/bin/rm" not in guide, "guide asks the shell to delete files")
+    require(digest(BOOTSTRAP) in guide, "guide does not pin the bootstrap SHA-256")
+    for forbidden in (
+        "/Applications/WorkBuddy.app",
+        "$HOME/.workbuddy",
+        "3.0-preview",
+        "workbuddy-cn-install-macos.js'",
+        "workbuddy-cn-oauth-macos.js'",
+        "codebuddy plugin",
+        "ELECTRON_RUN_AS_NODE",
+        "const fs =",
+        "| /bin/sh",
+        "| sh",
+    ):
+        require(forbidden not in guide, f"guide contains implementation detail: {forbidden}")
+    shell_blocks = re.findall(r"\x60\x60\x60sh\n(.*?)\x60\x60\x60", guide, flags=re.S)
+    require(len(shell_blocks) == 1, "guide must contain one shell bootstrap block")
+    require(
+        len([line for line in shell_blocks[0].splitlines() if line.strip()]) <= 14,
+        "guide bootstrap is too large",
+    )
+
+    for expected in (
+        "#!/bin/sh\n\nset -eu\numask 077\n",
+        'com.tencent.workbuddy.mac',
+        "path to application id",
+        "CODEBUDDY_CONFIG_DIR",
+        "https://www.codebuddy.cn/work/",
+        "raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main",
+        "curl",
+        "shasum -a 256",
+        "MAX_SCRIPT_BYTES=1048576",
+        'ELECTRON_RUN_AS_NODE=1 "$electron"',
+    ):
+        require(expected in bootstrap, f"bootstrap is missing {expected}")
+    require(digest(INSTALLER) in bootstrap, "bootstrap does not pin installer SHA-256")
+    require(digest(OAUTH) in bootstrap, "bootstrap does not pin OAuth SHA-256")
+    for forbidden in (
+        "MIN_APP_VERSION",
+        "MIN_CLI_VERSION",
+        "PLUGIN_VERSION",
+        "3.0-preview",
+        "2.132.0",
+        "5.4.4",
+        "/internal/mcp/",
+        "OAUTH_PORT",
+        "--serve",
+        "--prewarm",
+        "curl -fsSL",
+        "| bash",
+        "| sh",
+        "npm install",
+        "brew install",
+    ):
+        require(forbidden not in bootstrap, f"bootstrap exceeds scope: {forbidden}")
 
     installer_requirements = (
         'const MARKETPLACE_REPOSITORY = "varsity-tech-product/quandora-plugins";',
         'const PLUGIN_ID = "quandora@quandora";',
-        'const PLUGIN_VERSION = "3.0-preview";',
         'const MCP_URL = "https://mcp.quandora.ai/quant";',
-        'const OAUTH_HELPER_URL = "https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/plugins/quandora/scripts/workbuddy-cn-oauth-macos.js";',
-        f'const OAUTH_HELPER_SHA256 = "{oauth_sha256}";',
         'stdio: ["ignore", "pipe", "pipe"]',
         "shell: false",
         "const CLI_TIMEOUT_MS = 2 * 60 * 1000;",
@@ -124,18 +182,17 @@ def main() -> None:
         '"CODEBUDDY_MCP_CONFIG"',
         '"CODEBUDDY_SERVICE_PROXY_URL"',
         'path.basename(installerPath) !== "workbuddy-cn-install-macos.js"',
-        '!isInside(temporaryRoot, installerDirectory)',
+        "!isInside(temporaryRoot, installerDirectory)",
         "fs.unlinkSync(installerPath)",
         "fs.rmdirSync(installerDirectory)",
         'path.basename(reviewedHelperPath) !== "workbuddy-cn-oauth-macos.js"',
         "path.dirname(reviewedHelperPath) !== path.dirname(installerPath)",
-        "sha256(reviewedHelperPath) !== OAUTH_HELPER_SHA256",
-        'redirect: "error"',
-        "signal: AbortSignal.timeout(30 * 1000)",
-        'fs.writeFileSync(helperPath, bytes, { flag: "wx", mode: 0o600 })',
-        'path.join(appRoot, "Contents", "MacOS", "Electron")',
+        'realpath(process.execPath, "Active runtime") !== electron',
+        'pluginArgs("--help")',
         'env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" }',
-        'step: "browser_authorization_starting"',
+        "onStderrLine: relayOAuthProgress",
+        '"browser_opened"',
+        "oauthFailureRequiresHostUpdate",
     )
     for expected in installer_requirements:
         require(expected in installer, f"installer is missing {expected}")
@@ -150,16 +207,16 @@ def main() -> None:
         ".credentials.json",
         "purgeByServerName",
         "runningInstallerHash",
+        "MIN_APP_VERSION",
+        "MIN_CLI_VERSION",
+        "PLUGIN_VERSION",
+        "OAUTH_HELPER_URL",
+        "/Applications/WorkBuddy.app",
         '["plugin", "marketplace"',
         '["plugin", "install"',
         '["plugin", "enable"',
     ):
         require(forbidden not in installer, f"installer exceeds scope: {forbidden}")
-
-    require(wrapper.startswith("#!/bin/sh\nset -eu\numask 077\n"), "unsafe shell prelude")
-    require("ELECTRON_RUN_AS_NODE=1" in wrapper, "bundled Electron is not used")
-    require("codebuddy" not in wrapper.lower(), "OAuth wrapper must not start another CLI")
-    require("curl" not in wrapper.lower(), "OAuth wrapper must not make shell HTTP calls")
 
     oauth_requirements = (
         'const CONFIG_ID = "custom-mcp:quandora";',
@@ -168,6 +225,7 @@ def main() -> None:
         'mcpServers?.["quandora"]',
         'path.join(configRoot, "storage", "skeleton", "account-snapshot.json")',
         'path.join(configRoot, "plugins", "cache")',
+        'fs.realpathSync(process.execPath) !== electron',
         "ConnectorOAuthStore",
         "store.loadTokens(CONFIG_ID, MCP_URL)",
         "store.saveClientInfo(CONFIG_ID, MCP_URL, clientInformation)",
@@ -183,12 +241,12 @@ def main() -> None:
         "callbackResponse.shouldKeepAlive = false",
         'Connection: "close"',
         "server.closeAllConnections?.()",
+        '"host_update_required"',
         "module.exports = { createCallbackServer };",
         "error instanceof SafeError",
     )
     for expected in oauth_requirements:
         require(expected in oauth, f"OAuth helper is missing {expected}")
-
     for forbidden in (
         "readdirSync",
         "globSync",
@@ -198,30 +256,40 @@ def main() -> None:
         "deleteAll(",
         "clearLegacyPlaintext",
         ".credentials.json",
+        "QUANDORA_WORKBUDDY_FORCE_REAUTH",
+        "/Applications/WorkBuddy.app",
     ):
         require(forbidden not in oauth, f"OAuth helper exceeds scope: {forbidden}")
     require(
         len(re.findall(r"fs\.readFileSync\(", oauth)) == 1,
         "OAuth helper gained another raw file-read primitive",
     )
+    require(
+        not (PLUGIN / "scripts" / "workbuddy-cn-auth-macos.sh").exists(),
+        "obsolete WorkBuddy China OAuth wrapper remains",
+    )
 
-    wrapper_mode = WRAPPER.stat().st_mode
-    require(wrapper_mode & stat.S_IXUSR, "macOS wrapper is not executable")
-    installer_mode = INSTALLER.stat().st_mode
-    require(installer_mode & stat.S_IXUSR, "macOS installer is not executable")
-    callback_test_mode = CALLBACK_TEST.stat().st_mode
-    require(callback_test_mode & stat.S_IXUSR, "OAuth callback test is not executable")
+    for executable in (BOOTSTRAP, INSTALLER, CALLBACK_TEST):
+        require(
+            executable.stat().st_mode & stat.S_IXUSR,
+            f"required executable bit missing: {executable.name}",
+        )
+
     print(
         json.dumps(
             {
                 "status": "ok",
                 "packageVersion": versions[0],
                 "platform": "workbuddy-cn-macos",
+                "guideBootstrapLines": len(
+                    [line for line in shell_blocks[0].splitlines() if line.strip()]
+                ),
+                "hostDiscovery": "bundle-and-capability",
                 "credentialReads": "quandora-slot-only",
                 "installerCliStdin": "closed",
                 "installerCliMode": "headless-print",
                 "agentRoutingEnvironment": "removed",
-                "oauthHelper": "bootstrap-hash-pinned",
+                "installerComponents": "bootstrap-hash-pinned",
             },
             separators=(",", ":"),
         )

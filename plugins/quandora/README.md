@@ -46,16 +46,16 @@ skills/
 
 ## CodeBuddy and the WorkBuddy China edition
 
-The CodeBuddy-compatible plugin manifest registers all five skills and the plugin-managed `quandora` remote HTTP MCP server. The macOS WorkBuddy China flow is documented in `agent-install-guide/workbuddy-cn.md` and ships a deterministic installer plus two fixed-purpose OAuth helpers:
+The CodeBuddy-compatible plugin manifest registers all five skills and the plugin-managed `quandora` remote HTTP MCP server. The macOS WorkBuddy China flow is documented in `agent-install-guide/workbuddy-cn.md` and uses three reviewed, single-purpose components:
 
 ```text
 scripts/
+  workbuddy-cn-bootstrap-macos.sh
   workbuddy-cn-install-macos.js
-  workbuddy-cn-auth-macos.sh
   workbuddy-cn-oauth-macos.js
 ```
 
-The installer uses WorkBuddy's bundled runtime and plugin manager with closed stdin, bounded child processes, exact production identities, and no shell interpolation. It installs or verifies the managed package before invoking the shell entrypoint. The OAuth JavaScript verifies this installed plugin and the production endpoint, uses WorkBuddy's own OAuth implementation and account-scoped encrypted store, opens the browser for user consent, and makes a protected `fm_status` verification call. These helpers do not scan other connectors, expose OAuth material, install a runtime, or create a second MCP entry.
+The POSIX bootstrap uses only macOS system utilities to discover and validate the signed WorkBuddy China application and active configuration, then downloads and hash-verifies the two JavaScript components from the public production repository. The installer uses WorkBuddy's bundled runtime and plugin manager with closed stdin, bounded child processes, exact production trust anchors, and no shell interpolation. The OAuth helper verifies the installed plugin and production endpoint, uses WorkBuddy's native OAuth implementation and account-scoped encrypted store, opens the browser for user consent, and makes a protected `fm_status` verification call. These scripts bind to capabilities rather than a username, application/config location, WorkBuddy/CLI/plugin version, processor architecture, port, session, or cache version; they do not scan other connectors, expose OAuth material, install a runtime, or create a second MCP entry.
 
 ## Claude Desktop Code OAuth Launchers
 
