@@ -69,6 +69,10 @@ scripts/
 
 The macOS launcher uses `/usr/bin/script`; the Windows launcher uses Windows PowerShell 5.1 to start a native console. Both invoke only `plugin:quandora:quandora`, retain the remote MCP transport, avoid OAuth output logging, and leave browser identity and consent to the user.
 
+## FastAgent (tokenaissance Cloud)
+
+FastAgent consumes Quandora through its native OAuth MCP client rather than this marketplace's plugin format. An agent's `mcpServers` declares one OAuth-protected `quandora` entry (`type: http`, url `https://mcp.quandora.ai/quant`, `oauthResource` `https://mcp.quandora.ai/quant`), and the console's agent-settings **MCP OAuth** panel runs the authorize flow. The five skills install by copying each `skills/<name>` directory to `~/.fastagent/skills/<name>/`, where the FastAgent loader keys them by directory name. Full steps are in `agent-install-guide/fastagent.md`.
+
 ## Connection Recovery
 
 If the `quandora` connection is unavailable, update or reinstall the Quandora plugin, reconnect the plugin-managed Remote MCP server, and complete the host-native browser authorization flow again. The host owns OAuth and credentials; agents never request API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, or pasted credentials.

@@ -1,6 +1,9 @@
 ---
 name: paper-trading
 description: Use when the user asks for simulated trading, paper trading, current Paper PnL or assets, Paper positions/fills/funding/equity/code, stopping a Paper run, or a Strategy Portfolio Paper workflow on Quandora. Use strategy-building for factor selection and Strategy creation or backtests.
+metadata:
+  fastagent:
+    emoji: "📈"
 ---
 
 # Quandora Paper Trading

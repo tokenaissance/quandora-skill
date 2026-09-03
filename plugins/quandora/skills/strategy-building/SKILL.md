@@ -1,6 +1,9 @@
 ---
 name: strategy-building
 description: Use when the user asks to list available, eligible, or selectable Strategy factors, or to compose, create, backtest, resume, retrieve, or archive a cross-sectional Quandora Strategy using Official, Mine, or Shared factors. Route deep result diagnosis and optimization to strategy-analysis.
+metadata:
+  fastagent:
+    emoji: "🧩"
 ---
 
 # Quandora Strategy Building
@@ -70,6 +73,8 @@ before continuing:
   start a new chat.
 - CodeBuddy and the WorkBuddy China edition: update or reinstall the `quandora` plugin, reconnect its plugin-managed
   Remote MCP server, complete the host-native browser authorization flow, then start a new chat.
+- FastAgent (tokenaissance Cloud): the Quandora MCP server is attached to the agent. Open the agent's settings,
+  re-authorize `quandora` in the MCP OAuth panel (or run `fastagent mcp login quandora`), then start a new chat.
 
 Do not start a new authorization flow merely because an access token reached its seven-day lifetime
 or because of a single authorization response while the host is refreshing. Reauthorize only when

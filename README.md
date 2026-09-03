@@ -8,7 +8,7 @@
 
 #### Quandora is building an agentic finance infrastructure that turns generic AI agents into professional quant finance agents. Quandora gives AI agents the infrastructure to research markets, generate alphas and strategies, run backtests, and produce structured reports.
 
-| AI-Native Research Workflow                 | Run the quant research loop from Codex, Claude, Cursor, CodeBuddy, the WorkBuddy China edition, or Kimi Code: factor research, backtesting, analysis, strategy creation, and simulated Paper Trading.             |
+| AI-Native Research Workflow                 | Run the quant research loop from Codex, Claude, Cursor, CodeBuddy, the WorkBuddy China edition, Kimi Code, or FastAgent: factor research, backtesting, analysis, strategy creation, and simulated Paper Trading.             |
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Institutional Quant Infrastructure          | Quandora provides end-to-end infrastructure for your agent: task cards, supported data, evaluation rails, and backtesting, while your agent focuses on writing Python factor logic. |
 | Real Performance Evidence with Explanations | Get structured Factor and Strategy Reports with verdicts, metrics, risks, assumptions, and plain-English explanations.                                                              |
@@ -190,6 +190,16 @@ Start a new session, authorize the plugin-provided MCP server, and verify the co
 ```
 
 Complete authorization in the browser, then start a new session before invoking Factor Mining, Factor Analysis, Strategy Building, Strategy Analysis, or Paper Trading.
+
+#### FastAgent (tokenaissance Cloud)
+
+Quandora does not ship a FastAgent process plugin; FastAgent connects through its native OAuth MCP client. Give the operator of a tokenaissance-Cloud FastAgent agent this one-line prompt:
+
+```text
+Read https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/main/agent-install-guide/fastagent.md completely, then install and authenticate Quandora for me.
+```
+
+The guide adds one OAuth-protected `quandora` MCP server (`type: http`, url `https://mcp.quandora.ai/quant`, `oauthResource` the same URL) to the agent, authorizes it from the agent's **MCP OAuth** panel in the console, and copies the five skill directories to `~/.fastagent/skills/<name>/`. Start a new agent chat before invoking Factor Mining, Factor Analysis, Strategy Building, Strategy Analysis, or Paper Trading.
 
 ### Use Factor Mining
 
