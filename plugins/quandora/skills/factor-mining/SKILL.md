@@ -1,6 +1,9 @@
 ---
 name: factor-mining
 description: Use when the user explicitly asks about caller-owned or reusable Factor Mining factor families or history, or asks to construct, submit, backtest, resume, retrieve, or briefly summarize artifacts for a Factor Mining plugin. Route deep diagnosis and optimization of an existing factor result to factor-analysis.
+metadata:
+  fastagent:
+    emoji: "🧪"
 ---
 
 # Quandora Factor Mining
@@ -38,6 +41,7 @@ If the required Quandora tools are visible, continue automatically. If they are 
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
 - Claude Desktop: the plugin alone is not enough. Tell the user to open Settings -> Connectors, add a Connector named `quandora` with URL `https://mcp.quandora.ai/quant`, click Connect, authorize Quandora in the browser, then start a new chat.
 - CodeBuddy and the WorkBuddy China edition: update or reinstall the `quandora` plugin, reconnect its plugin-managed Remote MCP server, complete the host-native browser authorization flow, then start a new chat.
+- FastAgent (tokenaissance Cloud): the Quandora MCP server is attached to the agent. Open the agent's settings, re-authorize `quandora` in the MCP OAuth panel (or run `fastagent mcp login quandora`), then start a new chat.
 
 Do not start a new authorization flow merely because an access token reached its seven-day lifetime or because of a single authorization response while the host is refreshing. Reauthorize only when the host reports a terminal authorization failure or still requires authorization after refresh handling.
 

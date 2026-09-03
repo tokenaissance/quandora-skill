@@ -1,6 +1,9 @@
 ---
 name: strategy-analysis
 description: Analyze, diagnose, compare, and propose controlled improvements for existing Quandora cross-sectional Strategy results from owner-scoped server-persisted evidence. Use when a user asks why a Strategy worked or failed, wants six-chart diagnostics, requests factor-combination optimization ideas, or asks whether a completed backtest is ready for Paper Trading. Do not use to compose or submit a Strategy; route those requests to strategy-building.
+metadata:
+  fastagent:
+    emoji: "📊"
 ---
 
 # Strategy Analysis

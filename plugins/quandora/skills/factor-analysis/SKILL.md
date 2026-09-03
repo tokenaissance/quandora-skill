@@ -1,6 +1,9 @@
 ---
 name: factor-analysis
 description: Analyze, diagnose, compare, and propose controlled improvements for existing Quandora Factor Mining results from owner-scoped server-persisted evidence. Use when a user asks why a factor or rating passed or failed, requests a Factor Card Health Check or data-quality diagnosis, wants optimization ideas grounded in evidence, or asks whether a factor is ready for Strategy Building. Do not use for creating or submitting a new factor; route those requests to factor-mining.
+metadata:
+  fastagent:
+    emoji: "🔬"
 ---
 
 # Factor Analysis
