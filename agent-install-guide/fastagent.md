@@ -31,12 +31,12 @@ Pick the FastAgent agent that should receive Quandora. OAuth-backed MCP tools ar
 
 ## 2. Declare the Quandora MCP server on the agent
 
-If the five Quandora skills are already installed on the agent, the fastest path is
-in-chat self-service: as the agent owner, ask the agent to connect Quandora. Each skill
-contains a "FastAgent Self-Service Connection" section that drives the agent's `mcp`
-built-in — it declares the server with `mcp add`, then returns the `mcp login quandora`
-authorization URL for you to approve. The operator steps below are the equivalent
-console/config path for agents without the skills yet.
+If the five Quandora skills are already installed, each skill's SKILL.md frontmatter
+declares the MCP server it needs (`mcpServers: quandora` with `url` and
+`oauthResource` both `https://mcp.quandora.ai/quant`). As the agent owner, ask the
+agent to connect Quandora; FastAgent completes the server registration through its
+own MCP connection flow and returns the authorization URL for you to approve. The
+operator steps below are the equivalent console/config path.
 
 The Cloud console authorizes a server but does not add it to the agent. First declare an OAuth-protected `quandora` server in the agent's MCP configuration (the agent record that carries `mcpServers`):
 

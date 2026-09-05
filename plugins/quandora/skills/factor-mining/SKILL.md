@@ -4,6 +4,10 @@ description: Use when the user explicitly asks about caller-owned or reusable Fa
 metadata:
   fastagent:
     emoji: "🧪"
+mcpServers:
+  quandora:
+    url: https://mcp.quandora.ai/quant
+    oauthResource: https://mcp.quandora.ai/quant
 ---
 
 # Quandora Factor Mining
@@ -33,32 +37,6 @@ The version check is not a business action. For a normal Factor Mining workflow,
 
 <!-- end-plugin-version-reminder -->
 
-## FastAgent Self-Service Connection (tokenaissance Cloud)
-
-On FastAgent the `quandora` MCP server is declared per agent and managed by the agent's
-`mcp` built-in. Do not assume the server already exists. When the required Quandora
-tools are not visible or the connection is not authorized, run this owner-only setup in
-order:
-
-1. Run `mcp status` with no server name. If `quandora` is missing, run
-   `mcp add quandora` with `url=https://mcp.quandora.ai/quant` and
-   `oauthResource=https://mcp.quandora.ai/quant`, omitting scopes. Do not shorten or
-   rewrite these URLs.
-2. `mcp add` applies on the next agent build. If the result says the change applies on
-   the next build or that a reload is queued, tell the owner to start a new chat before
-   expecting Quandora tools. Never pretend the tools exist in the current session.
-3. If `quandora` is configured but not authorized, run `mcp login quandora`. Give the
-   returned authorization URL to the owner to open and approve. The host completes the
-   callback; do not ask the owner to paste the redirected URL into the chat and do not
-   poll for completion. Wait for the owner to confirm.
-4. If the tools are still missing in a new chat, do not re-add the server. Ask the owner
-   to re-authorize `quandora` from the agent's MCP OAuth panel (or run the host CLI
-   `fastagent mcp login quandora`), then start another new chat.
-
-The `mcp` tool is gated to the agent owner's own sessions. If you are not acting for the
-owner (visitor, shared, or public session), stop and tell the owner to run the setup or
-to authorize Quandora from the agent's MCP OAuth panel.
-
 If the required Quandora tools are visible, continue automatically. If they are not visible, tell the user to update or reinstall the current Quandora plugin, then use the host's normal Quandora reconnect and browser re-authorization path before stopping:
 
 - Codex CLI/TUI: run `codex mcp login quandora`. Wait for the user to complete the browser authorization flow, then check again for `fm_status`.
@@ -67,10 +45,7 @@ If the required Quandora tools are visible, continue automatically. If they are 
 - Claude Code: open `/mcp`, authenticate `quandora`, then start a new chat.
 - Claude Desktop: the plugin alone is not enough. Tell the user to open Settings -> Connectors, add a Connector named `quandora` with URL `https://mcp.quandora.ai/quant`, click Connect, authorize Quandora in the browser, then start a new chat.
 - CodeBuddy and the WorkBuddy China edition: update or reinstall the `quandora` plugin, reconnect its plugin-managed Remote MCP server, complete the host-native browser authorization flow, then start a new chat.
-- FastAgent (tokenaissance Cloud): follow the FastAgent Self-Service Connection section
-  above instead of reinstalling anything. If `quandora` is missing, add it with `mcp add`,
-  authorize with `mcp login quandora`, then start a new chat; if it is already attached,
-  re-authorize it and start a new chat.
+- FastAgent (tokenaissance Cloud): the Quandora MCP server is attached to the agent. Open the agent's settings, re-authorize `quandora` in the MCP OAuth panel (or run `fastagent mcp login quandora`), then start a new chat.
 
 Do not start a new authorization flow merely because an access token reached its seven-day lifetime or because of a single authorization response while the host is refreshing. Reauthorize only when the host reports a terminal authorization failure or still requires authorization after refresh handling.
 
