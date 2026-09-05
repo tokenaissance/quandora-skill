@@ -76,6 +76,28 @@ whole, keeping its `references/`.
 Installed skills become visible on the **next turn** — start a new chat before
 first business use.
 
+### npx (npx-capable hosts)
+
+Install the meta skill:
+
+```bash
+npx skills add tokenaissance/quandora-skill
+```
+
+Install one capability skill from the same repository:
+
+```bash
+npx skills add tokenaissance/quandora-skill --skill factor-mining
+npx skills add tokenaissance/quandora-skill --skill factor-analysis
+npx skills add tokenaissance/quandora-skill --skill strategy-building
+npx skills add tokenaissance/quandora-skill --skill strategy-analysis
+npx skills add tokenaissance/quandora-skill --skill paper-trading
+```
+
+Note: `npx skills add` targets `~/.agents/skills`, which the FastAgent runtime
+does not scan. FastAgent installs through its own agent-scoped skill flow
+described above.
+
 ## Connect and verify
 
 1. Ask the agent (owner session) to connect Quandora.
@@ -109,7 +131,7 @@ succeeds.
 - Setup logic is host-neutral: no pinned commands, no hardcoded method lists
   as contract, no credential handling.
 - Capability content is the product of Quandora's quant contracts and stays
-  versioned with the package (`v1.0.0`).
+  versioned with the package (`v1.1.0`).
 
 ## License
 
