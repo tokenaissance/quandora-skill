@@ -2,9 +2,9 @@
 
 > Install, connect, and verify Quandora's five FastAgent capability skills on one agent — factor mining, factor analysis, strategy building, strategy analysis, and simulated paper trading — over Quandora's OAuth-protected MCP server.
 
-[![GitHub Release](https://img.shields.io/github/v/release/tokenaissance/quandora-plugins?display_name=tag&sort=semver)](https://github.com/tokenaissance/quandora-plugins/releases)
-[![Stars](https://img.shields.io/github/stars/tokenaissance/quandora-plugins?style=flat)](https://github.com/tokenaissance/quandora-plugins/stargazers)
-[![Last commit](https://img.shields.io/github/last-commit/tokenaissance/quandora-plugins)](https://github.com/tokenaissance/quandora-plugins/commits/main)
+[![GitHub Release](https://img.shields.io/github/v/release/tokenaissance/quandora-skill?display_name=tag&sort=semver)](https://github.com/tokenaissance/quandora-skill/releases)
+[![Stars](https://img.shields.io/github/stars/tokenaissance/quandora-skill?style=flat)](https://github.com/tokenaissance/quandora-skill/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/tokenaissance/quandora-skill)](https://github.com/tokenaissance/quandora-skill/commits/main)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-black.svg)](LICENSE)
 
 `fastagent-quandora` is the meta skill for wiring Quandora onto a FastAgent
@@ -15,7 +15,7 @@ verifies the connection with the live server tool list.
 Give an agent owner session one instruction:
 
 ```text
-Install the five Quandora skills from tokenaissance/quandora-plugins on this agent,
+Install the five Quandora skills from tokenaissance/quandora-skill on this agent,
 connect Quandora, and verify the connection.
 ```
 
@@ -33,7 +33,7 @@ connect Quandora, and verify the connection.
 ## What it contains
 
 ```text
-quandora-plugins/
+quandora-skill/
 ├── SKILL.md                        # meta: install + connect + verify
 ├── README.md                       # this page
 ├── LICENSE                         # Apache-2.0
