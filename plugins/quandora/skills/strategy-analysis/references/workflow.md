@@ -1,0 +1,107 @@
+## Workflow
+
+### 1. Establish The Exact Run
+
+Prefer an exact `run_id` supplied by the user or already returned in the conversation. When no
+exact run id is supplied:
+
+1. Call `sb_list_runs` once with `{}`. It returns the owner's newest-first page with default
+   `limit: 10` and `offset: 0`.
+2. Use returned identity, name, timestamps, status, and optional summary only to select a run.
+3. If more than one plausible run remains, ask the user to choose. Do not guess.
+4. Do not auto-page. Request another page only for an explicit older-run request that the first page
+   cannot satisfy.
+
+If an exact run id is supplied, skip discovery.
+
+### 2. Read Canonical Composition And Parameters
+
+Call `sb_get_run` with the exact `run_id`. Treat its canonical `composition` and `parameters` as the
+authority for factor ids or weights, ranking, strategy type, window, capital, fees, rebalance bars,
+and attribution.
+
+If ranking was omitted at submission, the current Strategy default is neutral Top/Bottom 20%:
+`ranking: {mode: "percent", value: 20}` with `strategy_type: "neutral"`. Report the effective
+snapshot returned by `sb_get_run`; do not infer parameters from chart labels.
+
+If the run is not terminal, report the current state. Do not call `sb_resume_run` from this
+read-only skill and do not substitute local files.
+
+### 3. Read Core Server Artifacts
+
+Use `sb_get_artifact` for the exact run. Start with `summary` and `performance`, then request only
+the evidence needed for the question:
+
+- `equity_curve` and `drawdown_curve` for path, concentration, and recovery;
+- `turnover_curve` and `exposure_curve` for implementation intensity and neutrality;
+- `attribution` and `signal_return_curves` for mechanism claims when available;
+- `status`, `result`, `orders`, or `trades` only when a specific claim requires them.
+
+Treat each artifact status independently. Missing, pending, unavailable, or null evidence must stay
+explicitly missing. Do not use `logs` or `code` unless the user explicitly asks for inert text
+review; never execute either.
+
+### 4. Read Six-Chart Numerical Evidence
+
+1. Call `sb_analysis_data` with `chart: "overview"`.
+2. Confirm the exact `run_id`, server artifact identity, status, integrity digest, availability,
+   declared window, parameters, cross-section summary, missing styles, and chart catalog.
+3. Request only the chart pages needed for the diagnosis. Follow `next_offset` only for the same run
+   and chart until the required evidence is complete.
+4. Preserve returned point order, integer values, finite numbers, and nulls exactly.
+
+The six-chart route is the numerical analysis path. Do not request a Result Bundle, PNG, download
+ticket, storage URL, or local file to replace it. On `pending`, `not_available`, `too_large`, or
+`integrity_failed`, report the exact evidence limitation and continue only with independent server
+artifacts that remain trustworthy.
+
+### 5. Diagnose The Result
+
+Read [artifacts-and-metrics.md](references/artifacts-and-metrics.md) and
+[six-chart-diagnostics.md](references/six-chart-diagnostics.md). Evaluate:
+
+- headline return, Sharpe, Sortino, drawdown, win/loss behavior, and fees;
+- equity and drawdown shape, time concentration, and recovery;
+- daily turnover using the Strategy single-sided `/2` convention;
+- gross and net exposure and whether nominal neutrality held in practice;
+- factor composition and whether explicit weights created concentration;
+- all available chart families, including quantile ordering, long/short style, exposure, decay,
+  prediction-style correlation, and turnover;
+- evidence gaps and plausible market, liquidity, size, or implementation alternatives.
+
+For every consequential conclusion, label it **Observed**, **Inference**, **Alternative**, or
+**Experiment**.
+
+### 6. Keep Portfolio Selection Separate From Diagnostic Buckets
+
+Actual Strategy selection comes only from `sb_get_run.parameters.ranking`. Six-chart diagnostics use
+an adaptive grouping scheme based on the median daily cross-section:
+
+- median at least 20: 10 quantiles, minimum cross-section 20, diagnostic `top_pct: 0.10`;
+- median at least 15: 5 quantiles, minimum 10, diagnostic `top_pct: 0.20`;
+- median at least 9: 3 quantiles, minimum 6, diagnostic `top_pct: 0.30`;
+- median below 9: 2 quantiles, minimum `max(2, min(4, median))`, diagnostic `top_pct: 0.50`.
+
+`Q1` is the lowest prediction group and `QN` the highest. The diagnostic spread is
+`(QN - Q1) / 2`. Do not call these adaptive buckets the actual Top/Bottom 20% portfolio unless the
+effective run snapshot independently confirms a 20% ranking.
+
+### 7. Propose Controlled Experiments
+
+Prioritize a small number of changes. Each proposal must state the changed variable, motivating
+evidence, expected effect, confirmation metric, and tradeoff. Favor one-variable changes when
+possible. Examples include factor removal or reweighting, ranking breadth, rebalance cadence, fee
+sensitivity, and one suspected style control.
+
+Do not claim an automatic ablation or correlation matrix: retained evidence does not guarantee
+per-factor correlations or precomputed ablations. Ask for explicit confirmation, then hand the
+chosen test to `$strategy-building`.
+
+### 8. Assess Paper Readiness Without Paper Mutation
+
+Use [experiments-and-paper-readiness.md](references/experiments-and-paper-readiness.md). State whether
+the evidence supports rejection, further research, a controlled rerun, or consideration for Paper.
+Do not start Paper Trading. After explicit user confirmation, hand actual Paper operations to
+`$paper-trading`.
+
+
