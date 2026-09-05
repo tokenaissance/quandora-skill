@@ -201,6 +201,11 @@ Read https://raw.githubusercontent.com/varsity-tech-product/quandora-plugins/mai
 
 The guide adds one OAuth-protected `quandora` MCP server (`type: http`, url `https://mcp.quandora.ai/quant`, `oauthResource` the same URL) to the agent, authorizes it from the agent's **MCP OAuth** panel in the console, and copies the five skill directories to `~/.fastagent/skills/<name>/`. Start a new agent chat before invoking Factor Mining, Factor Analysis, Strategy Building, Strategy Analysis, or Paper Trading.
 
+If the five skills are already installed on an agent, skip the operator steps and ask
+the agent (as its owner) to connect Quandora: the skill instructs the agent to declare
+the server with its `mcp add` built-in and hand you the `mcp login quandora`
+authorization URL to approve.
+
 ### Use Factor Mining
 
 Use the skill command when available:
