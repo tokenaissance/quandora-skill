@@ -12,7 +12,7 @@ mcpServers:
 
 # Quandora Paper Trading
 
-Bundled plugin version: 1.1.0
+Bundled plugin version: 1.2.0
 
 Use this skill through the authenticated `quandora` MCP connection. It operates only on
 the current user's product-safe StrategyRun, Paper run, and Strategy Portfolio handles. It is
@@ -31,7 +31,7 @@ account credentials, or any other secret.
 
 On the first entry into any Quandora skill in the current conversation, if the conversation history
 does not already contain one successful `qd_plugin_ver` call and no earlier version-check
-attempt has occurred, call it once before the business entry point. Pass `1.1.0` verbatim as
+attempt has occurred, call it once before the business entry point. Pass `1.2.0` verbatim as
 `installed_version`; treat it as an opaque release label and never parse, order, or normalize it.
 
 - If `update_available=false`, continue silently.
@@ -47,7 +47,7 @@ attempt has occurred, call it once before the business entry point. Pass `1.1.0`
 Route read-only diagnosis of a completed Strategy result or Paper-readiness assessment to
 `$strategy-analysis`. Keep actual Paper discovery, start, monitoring, data reads, and stop here.
 
-The tool names in this skill are the 1.1.0 baseline. The Quandora server's
+The tool names in this skill are the 1.2.0 baseline. The Quandora server's
 live tool list is authoritative: tools may be added, renamed, or removed
 between releases. If a listed tool is absent or an unlisted one appears,
 follow the live list and the plugin version reminder.

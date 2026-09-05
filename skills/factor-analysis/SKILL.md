@@ -12,7 +12,7 @@ mcpServers:
 
 # Factor Analysis
 
-Bundled plugin version: 1.1.0
+Bundled plugin version: 1.2.0
 
 Analyze one exact factor result as a read-only research workflow. Use Quandora's owner-scoped,
 server-persisted Factor Card, chart data, and job-linked source. Separate observed evidence from

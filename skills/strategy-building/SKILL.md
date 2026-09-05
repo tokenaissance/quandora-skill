@@ -12,7 +12,7 @@ mcpServers:
 
 # Quandora Strategy Building
 
-Bundled plugin version: 1.1.0
+Bundled plugin version: 1.2.0
 
 Use this skill through the authenticated Quandora connection exposed by the host as
 `quandora`. It owns factor selection, Strategy creation or revision, and Strategy backtests for
@@ -50,7 +50,7 @@ Bundle workflow uses the relevant subset of `sb_get_contract`, `sb_list_eligible
 remain legacy single-artifact compatibility actions. Use `qd_get_guidance` only for one of the
 documented guidance branches below.
 
-The tool names in this skill are the 1.1.0 baseline. The Quandora server's
+The tool names in this skill are the 1.2.0 baseline. The Quandora server's
 live tool list is authoritative: tools may be added, renamed, or removed
 between releases. If a listed tool is absent or an unlisted one appears,
 follow the live list and the plugin version reminder.
