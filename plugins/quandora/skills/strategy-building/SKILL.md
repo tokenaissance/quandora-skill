@@ -4,6 +4,10 @@ description: Use when the user asks to list available, eligible, or selectable S
 metadata:
   fastagent:
     emoji: "🧩"
+mcpServers:
+  quandora:
+    url: https://mcp.quandora.ai/quant
+    oauthResource: https://mcp.quandora.ai/quant
 ---
 
 # Quandora Strategy Building

@@ -4,6 +4,10 @@ description: Use when the user asks for simulated trading, paper trading, curren
 metadata:
   fastagent:
     emoji: "📈"
+mcpServers:
+  quandora:
+    url: https://mcp.quandora.ai/quant
+    oauthResource: https://mcp.quandora.ai/quant
 ---
 
 # Quandora Paper Trading

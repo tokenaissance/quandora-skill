@@ -4,6 +4,10 @@ description: Analyze, diagnose, compare, and propose controlled improvements for
 metadata:
   fastagent:
     emoji: "📊"
+mcpServers:
+  quandora:
+    url: https://mcp.quandora.ai/quant
+    oauthResource: https://mcp.quandora.ai/quant
 ---
 
 # Strategy Analysis

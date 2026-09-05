@@ -73,6 +73,13 @@ The macOS launcher uses `/usr/bin/script`; the Windows launcher uses Windows Pow
 
 FastAgent consumes Quandora through its native OAuth MCP client rather than this marketplace's plugin format. An agent's `mcpServers` declares one OAuth-protected `quandora` entry (`type: http`, url `https://mcp.quandora.ai/quant`, `oauthResource` `https://mcp.quandora.ai/quant`), and the console's agent-settings **MCP OAuth** panel runs the authorize flow. The five skills install by copying each `skills/<name>` directory to `~/.fastagent/skills/<name>/`, where the FastAgent loader keys them by directory name. Full steps are in `agent-install-guide/fastagent.md`.
 
+Once the skills are installed, FastAgent is self-service: each skill's SKILL.md
+frontmatter declares the Quandora MCP server (`mcpServers` with `url` and
+`oauthResource` both `https://mcp.quandora.ai/quant`). When you ask the agent to use
+the skill, FastAgent connects the declared server through its own MCP connection
+flow and returns the authorization URL for the owner to approve. The agent never
+handles credentials or asks for pasted URLs.
+
 ## Connection Recovery
 
 If the `quandora` connection is unavailable, update or reinstall the Quandora plugin, reconnect the plugin-managed Remote MCP server, and complete the host-native browser authorization flow again. The host owns OAuth and credentials; agents never request API keys, bearer tokens, authorization codes, access tokens, refresh tokens, PKCE verifiers, or pasted credentials.

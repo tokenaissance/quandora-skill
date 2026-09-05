@@ -4,6 +4,10 @@ description: Use when the user explicitly asks about caller-owned or reusable Fa
 metadata:
   fastagent:
     emoji: "🧪"
+mcpServers:
+  quandora:
+    url: https://mcp.quandora.ai/quant
+    oauthResource: https://mcp.quandora.ai/quant
 ---
 
 # Quandora Factor Mining
