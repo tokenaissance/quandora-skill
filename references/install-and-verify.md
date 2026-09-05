@@ -6,7 +6,7 @@ so the meta skill and its operator share one checklist.
 
 ## Facts to provide
 
-- Repository: `tokenaissance/quandora-plugins`
+- Repository: `tokenaissance/quandora-skill`
 - Skill folders to install: `skills/factor-mining`,
   `skills/factor-analysis`, `skills/strategy-building`,
   `skills/strategy-analysis`, `skills/paper-trading`
