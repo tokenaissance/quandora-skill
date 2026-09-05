@@ -12,7 +12,7 @@ mcpServers:
 
 # Quandora Factor Mining
 
-Bundled plugin version: 3.0-preview
+Bundled plugin version: 1.0.0
 
 Use this skill to run Factor Mining through the authenticated Quandora connection exposed by the host as `quandora`.
 
@@ -54,6 +54,11 @@ Do not ask for Quandora API keys, `vt_` keys, bearer tokens, authorization codes
 ## Available Actions
 
 After routing has confirmed Factor Mining scope, use only the Factor Mining actions exposed by `quandora`. The artifact-ticket download exception above is only for consuming returned artifact bytes; it is not permission to call a service API directly.
+
+The action names below are the 1.0.0 baseline. The Quandora server's live
+tool list is authoritative: actions may be added, renamed, or removed between
+releases. If a listed action is absent or an unlisted one appears, follow the
+live list and the plugin version reminder.
 
 - `fm_status`
 - `fm_list_factors`
