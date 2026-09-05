@@ -1,0 +1,74 @@
+{
+  "recommended_threshold": 0.34,
+  "description_required_concepts": [
+    "quandora",
+    "fastagent",
+    "install",
+    "connect"
+  ],
+  "positive_concepts": {
+    "quandora": [
+      "quandora",
+      "因子",
+      "factor",
+      "strategy",
+      "paper trading"
+    ],
+    "action": [
+      "install",
+      "install skills",
+      "安装",
+      "connect",
+      "连接",
+      "verify",
+      "验证",
+      "setup",
+      "配置"
+    ],
+    "fastagent": [
+      "fastagent",
+      "agent",
+      "这个 agent"
+    ]
+  },
+  "negative_patterns": [
+    "不要安装",
+    "只解释",
+    "just explain",
+    "don't install",
+    "翻译",
+    "translate only",
+    "跑因子",
+    "run factor mining"
+  ],
+  "should_trigger": [
+    {
+      "text": "帮我把 Quandora 装到这个 agent 上并连接",
+      "family": "cn_install_connect"
+    },
+    {
+      "text": "Install Quandora's five skills on this agent and verify the MCP connection",
+      "family": "en_install_verify"
+    },
+    {
+      "text": "Quandora 连不上，重新连接并验证",
+      "family": "cn_reconnect"
+    }
+  ],
+  "should_not_trigger": [
+    {
+      "text": "解释一下 Quandora 是什么",
+      "family": "explain_only"
+    },
+    {
+      "text": "用 factor-mining 跑一个因子回测",
+      "family": "business_only"
+    }
+  ],
+  "near_neighbor": [
+    {
+      "text": "先列出这个 agent 上已经装好的 Quandora 技能",
+      "family": "inspect_only"
+    }
+  ]
+}
