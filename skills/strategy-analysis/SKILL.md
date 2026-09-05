@@ -12,7 +12,7 @@ mcpServers:
 
 # Strategy Analysis
 
-Bundled plugin version: 1.0.0
+Bundled plugin version: 1.1.0
 
 Analyze one exact cross-sectional Strategy run as a read-only research workflow. Pair Product
 Backend's canonical run snapshot with owner-scoped retained artifacts and bounded six-chart data.
