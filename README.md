@@ -1,4 +1,4 @@
-# fastagent-quandora
+# quandora-skill
 
 > Install, connect, and verify Quandora's five FastAgent capability skills on one agent — factor mining, factor analysis, strategy building, strategy analysis, and simulated paper trading — over Quandora's OAuth-protected MCP server.
 
@@ -7,7 +7,7 @@
 [![Last commit](https://img.shields.io/github/last-commit/tokenaissance/quandora-skill)](https://github.com/tokenaissance/quandora-skill/commits/main)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-black.svg)](LICENSE)
 
-`fastagent-quandora` is the meta skill for wiring Quandora onto a FastAgent
+`quandora-skill` is the meta skill for wiring Quandora onto a FastAgent
 agent. It does not perform quant work itself; it installs the five capability
 skill packages, connects the Quandora MCP server the skills declare, and
 verifies the connection with the live server tool list.
@@ -131,7 +131,7 @@ succeeds.
 - Setup logic is host-neutral: no pinned commands, no hardcoded method lists
   as contract, no credential handling.
 - Capability content is the product of Quandora's quant contracts and stays
-  versioned with the package (`v1.1.0`).
+  versioned with the package (`v1.2.0`).
 
 ## License
 
