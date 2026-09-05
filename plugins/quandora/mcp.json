@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "quandora": {
-      "type": "http",
-      "url": "https://mcp.quandora.ai/quant"
-    }
-  }
-}
