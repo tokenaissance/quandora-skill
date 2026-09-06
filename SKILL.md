@@ -1,10 +1,10 @@
 ---
-name: quandora-skill
+name: quandora-skills
 description: |
   Install, connect, and verify Quandora on one FastAgent agent. Use when the agent owner asks to set up Quandora capabilities, to install or restore the five Quandora skills (factor-mining, factor-analysis, strategy-building, strategy-analysis, paper-trading), to connect, re-connect, or verify the Quandora OAuth-protected MCP server, or to republish this package. Once capabilities are installed, route factor, strategy, and paper-trading work to the corresponding skill; do not perform it here.
 metadata:
   author: Tokenaissance
-  version: "1.3.0"
+  version: "1.4.0"
   upstream_inspiration: fastagent-meta-skill
 ---
 

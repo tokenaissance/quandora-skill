@@ -1,7 +1,7 @@
 interface:
   display_name: "Quandora FastAgent Meta Skill"
   short_description: "Install and connect Quandora's five FastAgent skills on one agent"
-  default_prompt: "Use $quandora-skill when the agent owner asks to set up Quandora on FastAgent. Confirm the target agent is owned by the caller, then ask the agent to install the five skill folders (skills/factor-mining, skills/factor-analysis, skills/strategy-building, skills/strategy-analysis, skills/paper-trading) from tokenaissance/quandora-skill into this agent's private skills directory, connect the Quandora MCP server, and hand the owner the authorization step. After a new chat, verify the connection with a read-only Quandora call from the live server tool list. Never handle credentials, never hardcode MCP method names, and route factor/strategy/paper business work to the installed capability skills."
+  default_prompt: "Use $quandora-skills when the agent owner asks to set up Quandora on FastAgent. Confirm the target agent is owned by the caller, then ask the agent to install the five skill folders (skills/factor-mining, skills/factor-analysis, skills/strategy-building, skills/strategy-analysis, skills/paper-trading) from tokenaissance/quandora-skills into this agent's private skills directory, connect the Quandora MCP server, and hand the owner the authorization step. After a new chat, verify the connection with a read-only Quandora call from the live server tool list. Never handle credentials, never hardcode MCP method names, and route factor/strategy/paper business work to the installed capability skills."
   examples:
     - "帮我把 Quandora 装到这个 agent 上并连接"
     - "Install Quandora's five skills on this agent and verify the MCP connection"
