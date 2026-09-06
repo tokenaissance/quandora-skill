@@ -1,13 +1,13 @@
-# quandora-skill
+# quandora-skills
 
 > Install, connect, and verify Quandora's five FastAgent capability skills on one agent — factor mining, factor analysis, strategy building, strategy analysis, and simulated paper trading — over Quandora's OAuth-protected MCP server.
 
-[![GitHub Release](https://img.shields.io/github/v/release/tokenaissance/quandora-skill?display_name=tag&sort=semver)](https://github.com/tokenaissance/quandora-skill/releases)
-[![Stars](https://img.shields.io/github/stars/tokenaissance/quandora-skill?style=flat)](https://github.com/tokenaissance/quandora-skill/stargazers)
-[![Last commit](https://img.shields.io/github/last-commit/tokenaissance/quandora-skill)](https://github.com/tokenaissance/quandora-skill/commits/main)
+[![GitHub Release](https://img.shields.io/github/v/release/tokenaissance/quandora-skills?display_name=tag&sort=semver)](https://github.com/tokenaissance/quandora-skills/releases)
+[![Stars](https://img.shields.io/github/stars/tokenaissance/quandora-skills?style=flat)](https://github.com/tokenaissance/quandora-skills/stargazers)
+[![Last commit](https://img.shields.io/github/last-commit/tokenaissance/quandora-skills)](https://github.com/tokenaissance/quandora-skills/commits/main)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-black.svg)](LICENSE)
 
-`quandora-skill` is the meta skill for wiring Quandora onto a FastAgent
+`quandora-skills` is the meta skill for wiring Quandora onto a FastAgent
 agent. It does not perform quant work itself; it installs the five capability
 skill packages, connects the Quandora MCP server the skills declare, and
 verifies the connection with the live server tool list.
@@ -15,7 +15,7 @@ verifies the connection with the live server tool list.
 Give an agent owner session one instruction:
 
 ```text
-Install the five Quandora skills from tokenaissance/quandora-skill on this agent,
+Install the five Quandora skills from tokenaissance/quandora-skills on this agent,
 connect Quandora, and verify the connection.
 ```
 
@@ -33,7 +33,7 @@ connect Quandora, and verify the connection.
 ## What it contains
 
 ```text
-quandora-skill/
+quandora-skills/
 ├── SKILL.md                        # meta: install + connect + verify
 ├── README.md                       # this page
 ├── LICENSE                         # Apache-2.0
@@ -81,17 +81,17 @@ first business use.
 Install the meta skill:
 
 ```bash
-npx skills add tokenaissance/quandora-skill
+npx skills add tokenaissance/quandora-skills
 ```
 
 Install one capability skill from the same repository:
 
 ```bash
-npx skills add tokenaissance/quandora-skill --skill factor-mining
-npx skills add tokenaissance/quandora-skill --skill factor-analysis
-npx skills add tokenaissance/quandora-skill --skill strategy-building
-npx skills add tokenaissance/quandora-skill --skill strategy-analysis
-npx skills add tokenaissance/quandora-skill --skill paper-trading
+npx skills add tokenaissance/quandora-skills --skill factor-mining
+npx skills add tokenaissance/quandora-skills --skill factor-analysis
+npx skills add tokenaissance/quandora-skills --skill strategy-building
+npx skills add tokenaissance/quandora-skills --skill strategy-analysis
+npx skills add tokenaissance/quandora-skills --skill paper-trading
 ```
 
 Note: `npx skills add` targets `~/.agents/skills`, which the FastAgent runtime
@@ -131,7 +131,7 @@ succeeds.
 - Setup logic is host-neutral: no pinned commands, no hardcoded method lists
   as contract, no credential handling.
 - Capability content is the product of Quandora's quant contracts and stays
-  versioned with the package (`v1.3.0`).
+  versioned with the package (`v1.4.0`).
 
 ## License
 
