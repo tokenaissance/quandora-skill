@@ -57,8 +57,8 @@ artifacts that remain trustworthy.
 
 ### 5. Diagnose The Result
 
-Read [artifacts-and-metrics.md](references/artifacts-and-metrics.md) and
-[six-chart-diagnostics.md](references/six-chart-diagnostics.md). Evaluate:
+Read [artifacts-and-metrics.md](artifacts-and-metrics.md) and
+[six-chart-diagnostics.md](six-chart-diagnostics.md). Evaluate:
 
 - headline return, Sharpe, Sortino, drawdown, win/loss behavior, and fees;
 - equity and drawdown shape, time concentration, and recovery;
@@ -99,9 +99,8 @@ chosen test to `$strategy-building`.
 
 ### 8. Assess Paper Readiness Without Paper Mutation
 
-Use [experiments-and-paper-readiness.md](references/experiments-and-paper-readiness.md). State whether
+Use [experiments-and-paper-readiness.md](experiments-and-paper-readiness.md). State whether
 the evidence supports rejection, further research, a controlled rerun, or consideration for Paper.
 Do not start Paper Trading. After explicit user confirmation, hand actual Paper operations to
 `$paper-trading`.
-
 
