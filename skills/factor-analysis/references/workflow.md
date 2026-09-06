@@ -49,12 +49,12 @@ Record:
 
 The server response is the evidence object. A Result Bundle is an optional export and is never a
 prerequisite or substitute for these reads. See
-[evidence-contract.md](references/evidence-contract.md).
+[evidence-contract.md](evidence-contract.md).
 
 ### 4. Diagnose From Result To Mechanism
 
-Use [metric-semantics.md](references/metric-semantics.md) and
-[diagnosis-and-experiments.md](references/diagnosis-and-experiments.md). Evaluate:
+Use [metric-semantics.md](metric-semantics.md) and
+[diagnosis-and-experiments.md](diagnosis-and-experiments.md). Evaluate:
 
 - the Health Check before economic interpretation: record `passed`, `message`, `failed_metrics`,
   `window`, `coverage_basis`, recorded `thresholds`, and available `null_ratio`, `zero_ratio`,
@@ -100,5 +100,4 @@ Prioritize a small set of experiments. Change one mechanism at a time when pract
 Do not claim per-factor correlations or ablation results unless the server evidence contains them.
 Do not auto-create a new factor or Strategy. Ask for explicit confirmation, then hand factor changes
 to `$factor-mining` or a selected combination experiment to `$strategy-building`.
-
 

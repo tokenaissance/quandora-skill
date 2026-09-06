@@ -42,11 +42,11 @@ quandora-skills/
 ├── evals/trigger_cases.json        # should/not/near-neighbor triggers
 ├── references/install-and-verify.md
 └── skills/                         # five complete capability packages
-    ├── factor-mining/        SKILL.md + references/
-    ├── factor-analysis/      SKILL.md + references/
-    ├── strategy-building/    SKILL.md + references/
-    ├── strategy-analysis/    SKILL.md + references/
-    └── paper-trading/        SKILL.md + references/
+    ├── factor-mining/        SKILL.md + references/ + agents/ + assets/
+    ├── factor-analysis/      SKILL.md + references/ + agents/ + assets/
+    ├── strategy-building/    SKILL.md + references/ + agents/ + assets/
+    ├── strategy-analysis/    SKILL.md + references/ + agents/ + assets/
+    └── paper-trading/        SKILL.md + references/ + agents/ + assets/
 ```
 
 ## Natural-language examples
@@ -102,8 +102,9 @@ described above.
 
 1. Ask the agent (owner session) to connect Quandora.
 2. Approve the Quandora authorization when it is presented.
-3. Start a new chat and ask the agent to verify with a read-only Quandora call
-   from the live server tool list.
+3. Once the reload/build lands, verify in the same session with a read-only
+   Quandora call from the live server tool list; start a new chat only if the
+   host requires a restart.
 
 Done when the five skills appear on the agent and a read-only Quandora call
 succeeds.
@@ -118,8 +119,8 @@ succeeds.
 
 | Problem | Common cause | Fix |
 |---|---|---|
-| Skill not visible after install | Skill loads on the next turn | Start a new chat; verify the folder was installed whole |
-| No Quandora tools | Server not connected or not authorized | Re-authorize once from the agent's MCP connection flow, then new chat |
+| Skill not visible right after install | Host catalogs skills on reload/build | Verify in-session once the reload lands; only start a new chat if the host requires a restart |
+| No Quandora tools | Server not connected or not authorized | Re-authorize once from the agent's MCP connection flow, then verify in-session after reload |
 | Listed tool missing | Server changed its tool set | Follow the live tool list; method names are server-authoritative |
 | Visitor cannot connect | MCP connection is owner-only | Ask the agent owner to connect / re-authorize |
 
@@ -131,7 +132,7 @@ succeeds.
 - Setup logic is host-neutral: no pinned commands, no hardcoded method lists
   as contract, no credential handling.
 - Capability content is the product of Quandora's quant contracts and stays
-  versioned with the package (`v1.4.0`).
+  versioned with the package (`v1.4.1`).
 
 ## License
 
