@@ -131,7 +131,7 @@ succeeds.
 - Setup logic is host-neutral: no pinned commands, no hardcoded method lists
   as contract, no credential handling.
 - Capability content is the product of Quandora's quant contracts and stays
-  versioned with the package (`v1.2.0`).
+  versioned with the package (`v1.3.0`).
 
 ## License
 
